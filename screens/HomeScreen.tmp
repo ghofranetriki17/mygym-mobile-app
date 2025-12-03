@@ -1,0 +1,1116 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  ScrollView,
+  Alert,
+  TextInput,
+  Modal,
+  RefreshControl,
+  Linking,
+} from 'react-native';
+import { branchAPI, groupSessionAPI, parametersAPI } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { FontAwesome, MaterialIcons, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = width * 0.78;
+const CARD_SPACING = 16;
+
+const HomeScreen = ({ navigation }) => {
+  const [branches, setBranches] = useState([]);
+  const [filteredBranches, setFilteredBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [userName, setUserName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [bookedSessions, setBookedSessions] = useState([]);
+  const [showBookingsModal, setShowBookingsModal] = useState(false);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [parameters, setParameters] = useState({});
+  const [loadingParams, setLoadingParams] = useState(true);
+  const [cityFilter, setCityFilter] = useState('all');
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadAllData();
+    }, [])
+  );
+
+  useEffect(() => {
+    const q = searchQuery.toLowerCase();
+    const filtered = branches.filter((b) => {
+      const matchesQuery = [b.name, b.city, b.address].some((field) =>
+        field?.toLowerCase().includes(q)
+      );
+      const matchesCity = cityFilter === 'all' || b.city?.toLowerCase() === cityFilter;
+      return matchesQuery && matchesCity;
+    });
+    setFilteredBranches(filtered);
+  }, [searchQuery, branches, cityFilter]);
+
+  const loadAllData = async () => {
+    await Promise.all([loadUserName(), loadParameters(), loadBranches(), loadBookedSessions()]);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadAllData();
+    setRefreshing(false);
+  };
+
+  const loadUserName = async () => {
+    try {
+      const storedUserName = await AsyncStorage.getItem('userName');
+      if (storedUserName) setUserName(storedUserName);
+    } catch (e) {
+      console.error('Error loading user name:', e);
+    }
+  };
+
+  const loadParameters = async () => {
+    try {
+      setLoadingParams(true);
+      const response = await parametersAPI.getPublic();
+      const paramsObj = response.data || {};
+      setParameters(paramsObj);
+    } catch (e) {
+      console.error('Error loading parameters:', e);
+      setParameters({});
+    } finally {
+      setLoadingParams(false);
+    }
+  };
+
+  const loadBranches = async () => {
+    try {
+      setLoading(true);
+      const response = await branchAPI.getAll();
+      setBranches(response.data);
+      setFilteredBranches(response.data);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load branches. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadBookedSessions = async () => {
+    try {
+      setLoadingBookings(true);
+      const response = await groupSessionAPI.getUserBookings();
+      setBookedSessions(response.data || response);
+    } catch (e) {
+      console.error('Error loading booked sessions:', e);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await AsyncStorage.clear();
+            navigation.replace('Auth');
+          } catch (e) {
+            console.error('Logout failed:', e);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleBranchPress = (branch) => navigation.navigate('BranchDetail', { branch });
+
+  const handleSocialPress = (url) => {
+    if (url) Linking.openURL(url).catch((err) => console.error('Failed to open URL:', err));
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const availabilitySnippet = (branch) => {
+    if (!branch.availabilities || !branch.availabilities.length) return 'Hours not provided';
+    return branch.availabilities
+      .slice(0, 2)
+      .map(
+        (a) => `${a.day_of_week?.slice(0, 3) || ''} ${a.opening_hour || '--:--'}-${a.closing_hour || '--:--'}`
+      )
+      .join(' ? ');
+  };
+
+  const renderBranchItem = ({ item }) => (
+    <TouchableOpacity style={styles.branchCard} onPress={() => handleBranchPress(item)}>
+      <View style={styles.branchHeader}>
+        <Text style={styles.branchName}>{item.name}</Text>
+        <View style={styles.chip}>
+          <Text style={styles.chipText}>{item.city || 'Location'}</Text>
+        </View>
+      </View>
+      <Text style={styles.branchAddress}>
+        <MaterialIcons name="location-on" size={14} color="#FF5C39" /> {item.address}, {item.city}
+      </Text>
+      <Text style={styles.branchContact}>
+        <MaterialIcons name="phone" size={14} color="#FF5C39" /> {item.phone}
+      </Text>
+      <Text style={styles.availabilityText}>{availabilitySnippet(item)}</Text>
+      <View style={styles.branchFooter}>
+        <TouchableOpacity style={styles.viewButton}>
+          <Text style={styles.viewButtonText}>View details</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderBookingItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.bookingItem}
+      onPress={() => {
+        setShowBookingsModal(false);
+        navigation.navigate('SessionDetail', { session: item });
+      }}
+    >
+      <Text style={styles.bookingTitle}>{item.title}</Text>
+      <Text style={styles.bookingDate}>{formatDate(item.session_date)}</Text>
+      <Text style={styles.bookingLocation}>
+        <MaterialIcons name="location-on" size={14} color="#FF5C39" /> {item.branch?.name || 'Unknown location'}
+      </Text>
+      <TouchableOpacity
+        style={styles.viewSessionButton}
+        onPress={() => {
+          setShowBookingsModal(false);
+          navigation.navigate('SessionDetail', { session: item });
+        }}
+      >
+        <Text style={styles.viewSessionButtonText}>View session</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
+  const appName = parameters.app_name || 'GymPro';
+  const welcomeMessage = parameters.welcome_message || 'Find your perfect workout spot';
+  const siteDescription = parameters.site_description || 'Premium fitness experience';
+  const openingHours = parameters.opening_hours || '06:00-22:00';
+  const heroImage = parameters.hero_image || null;
+
+  const upcomingSessions = useMemo(() => {
+    return (bookedSessions || [])
+      .filter((s) => s.session_date && new Date(s.session_date) >= new Date())
+      .sort((a, b) => new Date(a.session_date) - new Date(b.session_date))
+      .slice(0, 4);
+  }, [bookedSessions]);
+
+  const cities = useMemo(() => {
+    const unique = Array.from(new Set(branches.map((b) => (b.city || '').toLowerCase()).filter(Boolean)));
+    return ['all', ...unique];
+  }, [branches]);
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#FF5C39" />
+        <Text style={styles.loadingText}>Loading gyms...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadBranches}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF5C39" colors={["#FF5C39"]} />
+        }
+      >
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greetingText}>Hello, {userName || 'athlete'}</Text>
+            <Text style={styles.headerTitle}>{welcomeMessage}</Text>
+          </View>
+          <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+            <Ionicons name="notifications-outline" size={24} color="#FF5C39" />
+          </TouchableOpacity>
+        </View>
+
+        {loadingParams && (
+          <View style={styles.loadingParams}>
+            <ActivityIndicator size="small" color="#FF5C39" />
+            <Text style={styles.loadingParamsText}>Syncing settings...</Text>
+          </View>
+        )}
+
+        <View style={styles.heroBanner}>
+          {heroImage ? (
+            <Image source={{ uri: heroImage }} style={styles.heroImage} />
+          ) : (
+            <Image source={require('../assets/gym-banner.jpg')} style={styles.heroImage} />
+          )}
+          <View style={styles.heroOverlay}>
+            <Text style={styles.heroTitle}>{appName}</Text>
+            <Text style={styles.heroSubtitle}>{siteDescription}</Text>
+            <Text style={styles.heroHours}>
+              <MaterialIcons name="access-time" size={14} color="#F2F2F2" /> Open: {openingHours}
+            </Text>
+            <View style={styles.heroActions}>
+              <TouchableOpacity style={styles.primaryCta} onPress={() => navigation.navigate('BranchMap')}>
+                <Text style={styles.primaryCtaText}>Find a gym</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryCta} onPress={() => setShowBookingsModal(true)}>
+                <Text style={styles.secondaryCtaText}>My bookings</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.quickRow}>
+          <QuickCard label="Branches" value={branches.length} icon={<MaterialIcons name="store" size={20} color="#FF5C39" />} />
+          <QuickCard label="Bookings" value={bookedSessions.length} icon={<MaterialCommunityIcons name="calendar-check" size={20} color="#FF5C39" />} />
+          <QuickCard label="Open" value={openingHours} icon={<MaterialIcons name="access-time" size={20} color="#FF5C39" />} />
+        </View>
+
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#777" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search gyms or cities"
+            placeholderTextColor="#777"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery !== '' && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <MaterialIcons name="clear" size={20} color="#777" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {cities.length > 1 && (
+          <View style={styles.cityChips}>
+            {cities.map((c) => (
+              <TouchableOpacity
+                key={c}
+                onPress={() => setCityFilter(c)}
+                style={[styles.cityChip, cityFilter === c && styles.cityChipActive]}
+              >
+                <Text style={[styles.cityChipText, cityFilter === c && styles.cityChipTextActive]}>
+                  {c === 'all' ? 'All locations' : c}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {parameters.promo_title_1 || parameters.promo_title_2 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Special offers</Text>
+            <View style={styles.promotionsContainer}>
+              {parameters.promo_title_1 && (
+                <PromoCard title={parameters.promo_title_1} subtitle={parameters.promo_subtitle_1} />
+              )}
+              {parameters.promo_title_2 && (
+                <PromoCard title={parameters.promo_title_2} subtitle={parameters.promo_subtitle_2} />
+              )}
+            </View>
+          </View>
+        ) : null}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{searchQuery || cityFilter !== 'all' ? 'Filtered gyms' : 'Featured gyms'}</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('BranchMap')}>
+            <Text style={styles.seeAllText}>View map</Text>
+          </TouchableOpacity>
+        </View>
+        {filteredBranches.length > 0 ? (
+          <FlatList
+            horizontal
+            data={filteredBranches}
+            renderItem={renderBranchItem}
+            keyExtractor={(item) => item.id.toString()}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: CARD_SPACING, paddingBottom: 10 }}
+            snapToInterval={CARD_WIDTH + CARD_SPACING}
+            decelerationRate="fast"
+          />
+        ) : (
+          <View style={styles.noResults}>
+            <MaterialIcons name="search-off" size={40} color="#FF5C39" />
+            <Text style={styles.noResultsText}>No gyms found</Text>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Upcoming sessions</Text>
+            <TouchableOpacity onPress={() => setShowBookingsModal(true)}>
+              <Text style={styles.seeAllText}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          {upcomingSessions.length ? (
+            upcomingSessions.map((session) => (
+              <View key={session.id} style={styles.upcomingCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.upcomingTitle}>{session.title}</Text>
+                  <Text style={styles.upcomingMeta}>{formatDate(session.session_date)}</Text>
+                  <Text style={styles.upcomingMeta}>Branch: {session.branch?.name || '?'}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.viewSessionButton}
+                  onPress={() => navigation.navigate('SessionDetail', { session })}
+                >
+                  <Text style={styles.viewSessionButtonText}>Details</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          ) : (
+            <View style={styles.noResults}>
+              <Text style={styles.noResultsText}>No upcoming sessions yet</Text>
+            </View>
+          )}
+        </View>
+
+        {(parameters.contact_phone || parameters.contact_email || parameters.contact_address) && (
+          <View style={styles.contactSection}>
+            <Text style={styles.sectionTitle}>Contact us</Text>
+            <View style={styles.contactInfo}>
+              {parameters.contact_phone && <ContactRow icon="phone" text={parameters.contact_phone} />}
+              {parameters.contact_email && <ContactRow icon="email" text={parameters.contact_email} />}
+              {parameters.contact_address && <ContactRow icon="location-on" text={parameters.contact_address} />}
+            </View>
+          </View>
+        )}
+
+        {(parameters.facebook_url || parameters.instagram_url || parameters.twitter_url) && (
+          <View style={styles.socialSection}>
+            <Text style={styles.sectionTitle}>Follow us</Text>
+            <View style={styles.socialContainer}>
+              {parameters.facebook_url && (
+                <SocialButton
+                  label="Facebook"
+                  icon={<FontAwesome name="facebook" size={22} color="#1877F2" />}
+                  onPress={() => handleSocialPress(parameters.facebook_url)}
+                />
+              )}
+              {parameters.instagram_url && (
+                <SocialButton
+                  label="Instagram"
+                  icon={<FontAwesome name="instagram" size={22} color="#E4405F" />}
+                  onPress={() => handleSocialPress(parameters.instagram_url)}
+                />
+              )}
+              {parameters.twitter_url && (
+                <SocialButton
+                  label="Twitter"
+                  icon={<FontAwesome name="twitter" size={22} color="#1DA1F2" />}
+                  onPress={() => handleSocialPress(parameters.twitter_url)}
+                />
+              )}
+            </View>
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <FontAwesome name="sign-out" size={16} color="#FF5C39" style={styles.logoutIcon} />
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <TouchableOpacity style={styles.bookingsButton} onPress={() => setShowBookingsModal(true)}>
+        <MaterialCommunityIcons name="calendar-check" size={24} color="white" />
+        {bookedSessions.length > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{bookedSessions.length}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+
+      <View style={styles.floatingButtons}>
+        <TouchableOpacity style={styles.floatingButton} onPress={() => navigation.navigate('UserProgress')}>
+          <FontAwesome name="line-chart" size={20} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.floatingButton} onPress={() => navigation.navigate('WorkoutList')}>
+          <FontAwesome name="heartbeat" size={20} color="white" />
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={showBookingsModal}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowBookingsModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>My booked sessions</Text>
+            <TouchableOpacity onPress={() => setShowBookingsModal(false)}>
+              <MaterialIcons name="close" size={24} color="#FF5C39" />
+            </TouchableOpacity>
+          </View>
+
+          {loadingBookings ? (
+            <ActivityIndicator size="large" color="#FF5C39" style={styles.loadingIndicator} />
+          ) : bookedSessions.length > 0 ? (
+            <FlatList
+              data={bookedSessions}
+              renderItem={renderBookingItem}
+              keyExtractor={(item) => item.id.toString()}
+              contentContainerStyle={styles.bookingsList}
+            />
+          ) : (
+            <View style={styles.noBookings}>
+              <MaterialCommunityIcons name="calendar-remove" size={50} color="#FF5C39" />
+              <Text style={styles.noBookingsText}>No sessions booked yet</Text>
+              <TouchableOpacity
+                style={styles.findSessionsButton}
+                onPress={() => {
+                  setShowBookingsModal(false);
+                  navigation.navigate('BranchMap');
+                }}
+              >
+                <Text style={styles.findSessionsText}>Find sessions</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+const QuickCard = ({ label, value, icon }) => (
+  <View style={styles.quickCard}>
+    <View style={styles.quickIcon}>{icon}</View>
+    <Text style={styles.quickValue}>{value}</Text>
+    <Text style={styles.quickLabel}>{label}</Text>
+  </View>
+);
+
+const PromoCard = ({ title, subtitle }) => (
+  <View style={styles.promoCard}>
+    <View style={styles.promoContent}>
+      <Text style={styles.promoTitle}>{title}</Text>
+      {subtitle ? <Text style={styles.promoSubtitle}>{subtitle}</Text> : null}
+      <TouchableOpacity style={styles.promoButton}>
+        <Text style={styles.promoButtonText}>Claim offer</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
+const ContactRow = ({ icon, text }) => (
+  <View style={styles.contactItem}>
+    <MaterialIcons name={icon} size={20} color="#FF5C39" />
+    <Text style={styles.contactText}>{text}</Text>
+  </View>
+);
+
+const SocialButton = ({ label, icon, onPress }) => (
+  <TouchableOpacity style={styles.socialButton} onPress={onPress}>
+    {icon}
+    <Text style={styles.socialText}>{label}</Text>
+  </TouchableOpacity>
+);
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0F0F0F',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 12,
+  },
+  greetingText: {
+    fontSize: 15,
+    color: '#9CA3AF',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: 'white',
+  },
+  loadingParams: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    backgroundColor: '#171717',
+    marginHorizontal: 20,
+    marginBottom: 10,
+    borderRadius: 10,
+  },
+  loadingParamsText: {
+    color: 'white',
+    marginLeft: 10,
+    fontSize: 14,
+  },
+  heroBanner: {
+    height: 210,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#111',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 18,
+    justifyContent: 'flex-end',
+  },
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#E5E7EB',
+    marginBottom: 6,
+  },
+  heroHours: {
+    fontSize: 12,
+    color: '#D1D5DB',
+    marginBottom: 12,
+  },
+  heroActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  primaryCta: {
+    backgroundColor: '#FF5C39',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+  },
+  primaryCtaText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  secondaryCta: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  secondaryCtaText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  quickRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    gap: 10,
+  },
+  quickCard: {
+    flex: 1,
+    backgroundColor: '#161616',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+  },
+  quickIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,92,57,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  quickValue: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  quickLabel: {
+    color: '#A1A1AA',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#161616',
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 18,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    color: 'white',
+    fontSize: 14,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: 'white',
+    marginLeft: 20,
+    marginBottom: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  seeAllText: {
+    color: '#FF5C39',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cityChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    gap: 8,
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  cityChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+    backgroundColor: '#111',
+  },
+  cityChipActive: {
+    borderColor: '#FF5C39',
+    backgroundColor: 'rgba(255,92,57,0.12)',
+  },
+  cityChipText: {
+    color: '#D1D5DB',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  cityChipTextActive: {
+    color: '#FF5C39',
+  },
+  promotionsContainer: {
+    paddingLeft: 20,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  promoCard: {
+    width: width * 0.78,
+    backgroundColor: '#161616',
+    borderRadius: 14,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+  },
+  promoContent: {
+    flex: 1,
+  },
+  promoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FF5C39',
+    marginBottom: 6,
+  },
+  promoSubtitle: {
+    fontSize: 13,
+    color: '#D1D5DB',
+    marginBottom: 12,
+  },
+  promoButton: {
+    backgroundColor: '#FF5C39',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  promoButtonText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  branchCard: {
+    width: CARD_WIDTH,
+    backgroundColor: '#161616',
+    borderRadius: 16,
+    padding: 18,
+    marginRight: CARD_SPACING,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+  },
+  branchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    gap: 10,
+  },
+  branchName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FF5C39',
+    flex: 1,
+  },
+  chip: {
+    backgroundColor: 'rgba(255,92,57,0.1)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+  },
+  chipText: {
+    color: '#FF5C39',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  branchAddress: {
+    fontSize: 13,
+    color: '#D1D5DB',
+    marginBottom: 6,
+  },
+  branchContact: {
+    fontSize: 13,
+    color: '#D1D5DB',
+    marginBottom: 10,
+  },
+  availabilityText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginBottom: 12,
+  },
+  branchFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  viewButton: {
+    backgroundColor: '#FF5C39',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+  },
+  viewButtonText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  viewSessionButton: {
+    backgroundColor: '#FF5C39',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  viewSessionButtonText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  noResults: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  noResultsText: {
+    color: 'white',
+    fontSize: 15,
+    marginTop: 10,
+  },
+  upcomingCard: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 14,
+    backgroundColor: '#161616',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  upcomingTitle: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 15,
+    marginBottom: 2,
+  },
+  upcomingMeta: {
+    color: '#D1D5DB',
+    fontSize: 12,
+  },
+  contactSection: {
+    marginBottom: 24,
+    marginHorizontal: 20,
+  },
+  contactInfo: {
+    backgroundColor: '#161616',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  contactText: {
+    color: 'white',
+    marginLeft: 10,
+    fontSize: 14,
+  },
+  socialSection: {
+    marginBottom: 24,
+    marginHorizontal: 20,
+  },
+  socialContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#161616',
+    borderRadius: 12,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+  },
+  socialButton: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  socialText: {
+    color: 'white',
+    fontSize: 12,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#161616',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    marginHorizontal: 20,
+    marginBottom: 60,
+    borderWidth: 1,
+    borderColor: '#FF5C39',
+  },
+  logoutIcon: {
+    marginRight: 10,
+  },
+  logoutButtonText: {
+    color: '#FF5C39',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  floatingButtons: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    flexDirection: 'column',
+  },
+  floatingButton: {
+    backgroundColor: '#FF5C39',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0F0F0F',
+  },
+  loadingText: {
+    color: 'white',
+    marginTop: 10,
+    fontSize: 16,
+  },
+  errorText: {
+    color: '#FF5C39',
+    fontSize: 18,
+    marginBottom: 12,
+    fontWeight: '700',
+  },
+  retryButton: {
+    backgroundColor: '#FF5C39',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  bookingsButton: {
+    position: 'absolute',
+    bottom: 190,
+    right: 20,
+    backgroundColor: '#FF5C39',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'white',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: '#FF5C39',
+    fontWeight: '700',
+    fontSize: 11,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#0F0F0F',
+    paddingTop: 50,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F1F1F',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: 'white',
+  },
+  bookingsList: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  bookingItem: {
+    backgroundColor: '#161616',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+  },
+  bookingTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FF5C39',
+    marginBottom: 4,
+  },
+  bookingDate: {
+    fontSize: 13,
+    color: '#D1D5DB',
+    marginBottom: 4,
+  },
+  bookingLocation: {
+    fontSize: 13,
+    color: '#D1D5DB',
+  },
+  noBookings: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  noBookingsText: {
+    fontSize: 16,
+    color: 'white',
+    marginTop: 16,
+    marginBottom: 20,
+  },
+  findSessionsButton: {
+    backgroundColor: '#FF5C39',
+    paddingVertical: 12,
+    paddingHorizontal: 26,
+    borderRadius: 12,
+  },
+  findSessionsText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  loadingIndicator: {
+    marginTop: 40,
+  },
+});
+
+export default HomeScreen;

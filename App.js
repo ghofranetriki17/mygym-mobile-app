@@ -15,6 +15,8 @@ import MovementDetailsScreen from './screens/MovementDetailsScreen';
 import AddExerciseScreen from './screens/AddExerciseScreen';
 import CoachDetailScreen from './screens/CoachDetailScreen';
 import SessionDetail from './screens/SessionDetail';
+import BranchMapScreen from './screens/BranchMapScreen';
+import NotificationsScreen from './screens/NotificationsScreen';
 
 const Stack = createStackNavigator();
 
@@ -31,6 +33,16 @@ export default function App() {
           name="Home" 
           component={HomeScreen} 
           options={{ title: 'Our Branches' }} 
+        />
+        <Stack.Screen
+          name="BranchMap"
+          component={BranchMapScreen}
+          options={{ title: 'Map view' }}
+        />
+        <Stack.Screen
+          name="Notifications"
+          component={NotificationsScreen}
+          options={{ title: 'Notifications' }}
         />
         
 <Stack.Screen

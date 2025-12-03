@@ -225,7 +225,18 @@ export const machineAPI = {
   getByBranch: (branchId) => api.get(`/branches/${branchId}/machines`),
   getAll: () => api.get('/machines').then(res => res.data.data || res.data),
 };
+// Add this to your existing API service
 
+/* -------- Parameters API -------- */
+// In your services/api.js
+export const parametersAPI = {
+  // Get public parameters
+  getPublic: async (groupe = null) => {
+    const params = groupe ? { groupe } : {}
+    const { data } = await api.get('/parametres/public', { params })
+    return data
+  },
+}
 export const exerciseAPI = {
   create: (data) => api.post('/exercises', data).then(res => res.data),
   getAll: () => api.get('/exercises').then(res => res.data),
