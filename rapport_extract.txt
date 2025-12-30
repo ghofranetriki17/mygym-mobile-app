@@ -1,0 +1,259 @@
+--- Page 1 ---
+D´edicace
+Avec l’expression de ma toute reconnaissance, je d´ edie ce projet de fin d’´ etudes ` a
+`A mes chers parents
+Mes h´ eros ,vous ˆ etes la lumi` ere qui a guid´ e chacun de mes pas, vos sacrifices et votre
+d´ evouement sont des t´ emoignages ´ emouvant de votre amour ifini,vous avez sacrifi´ e vos
+propres d´ esirs pour me permettre de r´ ealiser les miens, et pour cela, je vous serai
+´ eternellement reconnaissant.
+`A mes chers fr` ere et sœur
+Vous avez ´ et´ e mes anges gardiens, m’apportant r´ econfort et soutien dans les moments les
+plus sombres de ma vie. Votre pr´ esence, votre amour d´ evou´ e et votre tendresse ont ´ et´ e
+comme une lumi` ere qui a dissip´ e les t´ en` ebres de la solitude et de la souffrance. Je vous suis
+infiniment reconnaissant(e) d’ˆ etre toujours ` a mes cˆ ot´ es, de partager vos cœurs g´ en´ ereux et
+votre amour inconditionnel. Merci d’avoir ´ et´ e mes compagnons fid` eles
+`A tous les membres de ma famille
+`A ma pr´ ecieuse famille, merci pour votre amour inconditionnel et votre soutien ind´ efectible
+` a chaque ´ etape de ma vie.
+`A tous mes enseignant du primaire ` a l’universitaire
+Pour leurs efforts qui ont men´ e ` a ma r´ eussite. Quels que soient les termes embrass´ es, je
+n’arriverais jamais ` a vous exprimer ma gratitude sinc` ere.
+`A mes meilleur(e)s ami(e)s
+Pour votre pr´ esence, vos encouragements et votre compr´ ehension tout au long de ce
+parcours. Votre soutien moral, vos conseils avis´ es et votre camaraderie ont ´ et´ e des sources
+de motivation inestimables pour moi.
+`A tous ceux qui m’ont soutenu..
+i
+
+--- Page 2 ---
+Table des mati` eres
+Introduction G´ en´ erale . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 1
+1´ETUDE PR ´EALABLE 3
+1.1 Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+1.2 Pr´ esentation g´ en´ erale de l’organisme d’accueil . . . . . . . . . . . . . . . . . 5
+1.2.1 Pr´ esentation de l’entreprise ExaDev . . . . . . . . . . . . . . . . . . . 5
+1.2.2 Services propos´ es . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+1.2.3 Localisation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+1.2.4 L’organigramme de l’entreprise . . . . . . . . . . . . . . . . . . . . . 7
+1.2.5 Concepts de base : D´ eveloppement mobile et web . . . . . . . . . . . 8
+1.3 Cadre g´ en´ eral du projet . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+1.3.1 Probl´ ematique et motivation . . . . . . . . . . . . . . . . . . . . . . . 10
+1.3.2 ´Etude de l’existant . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+1.3.3 Solution propos´ ee : ANAS’ GYM . . . . . . . . . . . . . . . . . . . . 14
+1.4 M´ ethodologie de travail . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+1.4.1 Rˆ oles d´ efinis dans le projet . . . . . . . . . . . . . . . . . . . . . . . . 19
+1.4.2 Processus Scrum adopt´ e . . . . . . . . . . . . . . . . . . . . . . . . . 20
+1.4.3 Pilotage du projet avec Scrum . . . . . . . . . . . . . . . . . . . . . . 20
+1.4.4 Planification d´ etaill´ ee des sprints . . . . . . . . . . . . . . . . . . . . 21
+1.5 Conclusion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+2 SP ´ECIFICATION DES BESOINS ET ANALYSE 24
+2.1 Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 25
+2.2 Identification des acteurs . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 25
+2.3 Besoins fonctionnels . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 25
+2.3.0.0.1 Authentification et profil . . . . . . . . . . . . . . . 25
+2.3.0.0.2 Gestion des workouts . . . . . . . . . . . . . . . . . 26
+ii
+
+--- Page 3 ---
+2.3.0.0.3 Programmes d’entraˆ ınement . . . . . . . . . . . . . 26
+2.3.0.0.4 Suivi de la progression (UserProgress) . . . . . . . 26
+2.3.0.0.5 Branches, ´ equipements et coachs . . . . . . . . . . 26
+2.3.0.0.6 S´ eances collectives (GroupTrainingSession) . . . . . 26
+2.3.0.0.7 Gestion des branches . . . . . . . . . . . . . . . . . 27
+2.3.0.0.8 Gestion des ´ equipements . . . . . . . . . . . . . . . 27
+2.3.0.0.9 Gestion des exercices, workouts et programmes . . 27
+2.3.0.0.10 Gestion des utilisateurs . . . . . . . . . . . . . . . 27
+2.3.0.0.11 Gestion des coachs . . . . . . . . . . . . . . . . . . 27
+2.3.0.0.12 Gestion des s´ eances collectives . . . . . . . . . . . . 27
+2.3.0.0.13 Param` etres publics . . . . . . . . . . . . . . . . . . 28
+2.4 Besoins non fonctionnels . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 28
+2.5 Langage de mod´ elisation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 28
+2.6 Diagramme de cas d’utilisation . . . . . . . . . . . . . . . . . . . . . . . . . 29
+2.7 Exemples de cas d’utilisation . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+2.7.1 Cr´ eer un workout . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+2.7.2 G´ erer les utilisateurs . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+2.7.3 Suivre la progression . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+2.8 Conclusion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+3´ETUDE CONCEPTUELLE 32
+3.1 Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+3.2 Outils et Frameworks . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+3.3 Architecture du projet . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 33
+3.4 Diagramme de classes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+3.5 Diagrammes de Use Case . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 35
+3.6 Conclusion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 36
+4 R ´EALISATION GLOBALE DE LA PLATEFORME 37
+4.1 Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 38
+4.2 Environnement de d´ eveloppement . . . . . . . . . . . . . . . . . . . . . . . . 38
+4.2.1 Outils utilis´ es . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 38
+4.2.2 Structure globale du d´ epˆ ot . . . . . . . . . . . . . . . . . . . . . . . . 38
+4.3 R´ ealisation du backend (Laravel + Sanctum + MySQL) . . . . . . . . . . . 39
+4.3.1 Conception et cr´ eation de la base de donn´ ees . . . . . . . . . . . . . . 39
+iii
+
+--- Page 4 ---
+4.3.2 Seeders et donn´ ees initiales . . . . . . . . . . . . . . . . . . . . . . . . 39
+4.3.3 Authentification avec Laravel Sanctum . . . . . . . . . . . . . . . . . 40
+4.3.4 Impl´ ementation des endpoints REST . . . . . . . . . . . . . . . . . . 40
+4.3.5 Tests via Thunder Client . . . . . . . . . . . . . . . . . . . . . . . . . 41
+4.4 R´ ealisation de l’application mobile (React Native + Expo) . . . . . . . . . . 41
+4.4.1 Structure et navigation . . . . . . . . . . . . . . . . . . . . . . . . . . 41
+4.4.2 Connexion ` a l’API . . . . . . . . . . . . . . . . . . . . . . . . . . . . 41
+4.4.3 Fonctionnalit´ es principales r´ ealis´ ees . . . . . . . . . . . . . . . . . . . 42
+4.4.3.0.1 Gestion des workouts . . . . . . . . . . . . . . . . . 42
+4.4.3.0.2 Branches et ´ equipements . . . . . . . . . . . . . . . 42
+4.4.3.0.3 Consultation des coachs . . . . . . . . . . . . . . . 42
+4.4.3.0.4 Sessions collectives . . . . . . . . . . . . . . . . . . 42
+4.4.3.0.5 Progression . . . . . . . . . . . . . . . . . . . . . . 42
+4.5 R´ ealisation du dashboard administrateur (React) . . . . . . . . . . . . . . . 42
+4.5.1 Structure g´ en´ erale . . . . . . . . . . . . . . . . . . . . . . . . . . . . 43
+4.5.2 Authentification administrateur . . . . . . . . . . . . . . . . . . . . . 43
+4.5.3 Fonctionnalit´ es r´ ealis´ ees . . . . . . . . . . . . . . . . . . . . . . . . . 43
+4.5.3.0.1 Gestion des ressources . . . . . . . . . . . . . . . . 43
+4.5.3.0.2 Gestion des coachs . . . . . . . . . . . . . . . . . . 43
+4.5.3.0.3 Sessions collectives . . . . . . . . . . . . . . . . . . 43
+4.6 Conclusion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 44
+Conclusion G´ en´ erale . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 44
+Webographie 48
+iv
+
+--- Page 5 ---
+Table des figures
+1.1 Logo de l’entreprise ExaDev . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+1.2 Organigramme de l’entreprise ExaDev . . . . . . . . . . . . . . . . . . . . . 7
+1.3 Architecture globale de la solution ANAS’ GYM . . . . . . . . . . . . . . . . 18
+1.4 Processus SCRUM appliqu´ e au projet . . . . . . . . . . . . . . . . . . . . . . 20
+2.1 StarUML . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 28
+2.2 Diagramme de cas d’utilisation de la plateforme . . . . . . . . . . . . . . . . 29
+3.1 Diagramme de classes de l’application MyGym . . . . . . . . . . . . . . . . . 34
+3.2 Diagramme g´ en´ eral de Use Case de la plateforme . . . . . . . . . . . . . . . 36
+v
+
+--- Page 6 ---
+Liste des tableaux
+1.1 Planification d´ etaill´ ee des sprints du projet ANAS’ GYM . . . . . . . . . . . 21
+2.1 Cas d’utilisation — Cr´ eer un workout . . . . . . . . . . . . . . . . . . . . . . 30
+2.2 Cas d’utilisation — G´ erer les utilisateurs . . . . . . . . . . . . . . . . . . . . 30
+2.3 Cas d’utilisation — Suivre la progression . . . . . . . . . . . . . . . . . . . . 31
+vi
+
+--- Page 7 ---
+Introduction G´ en´ erale
+Dans le contexte actuel o` u la pratique sportive et le suivi de la sant´ e deviennent des
+priorit´ es croissantes, les membres des salles de sport rencontrent souvent des difficult´ es ma-
+jeures pour g´ erer efficacement leurs entraˆ ınements, suivre leur progression physique et acc´ eder
+aux informations essentielles sur les ´ equipements et les coachs disponibles. En effet, les pro-
+grammes quotidiens ne sont pas historis´ es, les donn´ ees corporelles se perdent facilement, et
+la r´ eservation des cours collectifs reste complexe et source d’oublis. De plus, la multiplicit´ e
+des locaux et l’absence d’un syst` eme centralis´ e compliquent consid´ erablement l’acc` es aux
+informations n´ ecessaires pour une pratique sportive optimale.
+Le pr´ esent rapport synth´ etise le travail r´ ealis´ e lors de monstage d’´ et´ e de 2eann´ eeau
+sein de l’entreprise ExaDev ` a Sfax, visant ` a concevoir et d´ evelopper une plateforme compl` ete
+de gestion pour salles de sport multi-sites. Ce projet, nomm´ eANAS’ GYM(nom de code
+interne : MyGym), comprend une application mobile destin´ ee aux membres (d´ evelopp´ ee avec
+React Native et Expo) et un tableau de bord administrateur (d´ evelopp´ e avec React), tous
+deux adoss´ es ` a une API robuste Laravel s´ ecuris´ ee par Sanctum.
+L’objectif principal de cette plateforme est de centraliser l’ensemble des fonctionnalit´ es
+n´ ecessaires ` a une gestion moderne et efficace des salles de sport : la gestion des entraˆ ınements
+personnalis´ es, la r´ eservation simplifi´ ee de cours collectifs, le suivi d´ etaill´ e des progr` es phy-
+siques, la consultation des profils des coachs (g´ er´ es cˆ ot´ e administration et consultables par
+les membres), ainsi que la gestion compl` ete des ´ equipements disponibles dans chaque local.
+Cette solution vise ` a transformer l’exp´ erience utilisateur en offrant un acc` es unifi´ e, intuitif et
+fiable ` a toutes ces informations critiques.
+Le d´ eveloppement de cette plateforme s’est articul´ e autour de trois volets
+compl´ ementaires. Premi` erement, la conception d’une interface mobile intuitive et ergono-
+mique pour les membres, leur permettant d’acc´ eder aux fonctionnalit´ es de cr´ eation et d’histo-
+risation des workouts, de suivi de progression, de consultation des coachs et des ´ equipements,
+ainsi que de r´ eservation des cours collectifs, le tout accompagn´ e d’un syst` eme de notifications.
+Deuxi` emement, le d´ eveloppement d’un dashboard administrateur web permettant la gestion
+centralis´ ee de tous les locaux, des ´ equipements (machines, charges, cat´ egories, mouvements)
+et des s´ eances d’entraˆ ınement collectives. Troisi` emement, l’int´ egration d’un syst` eme robuste
+d’historisation et de stockage s´ ecuris´ e des donn´ ees li´ ees aux entraˆ ınements quotidiens (wor-
+kouts), aux programmes personnalis´ es, aux mesures corporelles et aux param` etres publics de
+chaque salle.
+Ce stage a permis de mettre en pratique et d’approfondir des comp´ etences techniques
+1
+
+--- Page 8 ---
+vari´ ees et actuelles : le d´ eveloppement mobile multiplateforme avecReact Native et Expo,
+le d´ eveloppement web moderne avecReact, ainsi que la conception et l’impl´ ementation d’API
+RESTful s´ ecuris´ ees avecLaravel et Sanctum. L’architecture adopt´ ee garantit la scalabilit´ e,
+la s´ ecurit´ e des donn´ ees sensibles et la maintenabilit´ e ` a long terme du syst` eme.
+Le pr´ esent rapport expose de mani` ere d´ etaill´ ee les diff´ erentes ´ etapes de r´ ealisation du
+projet ANAS’ GYM, depuis l’´ etude pr´ ealable et l’analyse rigoureuse des besoins fonctionnels
+et non fonctionnels, jusqu’` a la conception architecturale, le d´ eveloppement technique et la
+mise en œuvre op´ erationnelle de la solution.
+Notre travail est structur´ e en cinq chapitres coh´ erents et progressifs. Le premier chapitre
+pr´ esente l’entreprise d’accueil ExaDev, son organisation et le contexte g´ en´ eral du projet,
+en exposant la probl´ ematique rencontr´ ee et les motivations ` a l’origine de cette solution. Le
+second chapitre expose l’´ etude pr´ ealable et l’analyse approfondie des besoins des diff´ erents
+acteurs, ainsi que les solutions existantes sur le march´ e, avant de justifier les choix technolo-
+giques retenus. Le troisi` eme chapitre est consacr´ e ` a l’´ etude conceptuelle compl` ete, incluant
+la sp´ ecification fonctionnelle, la mod´ elisation UML des besoins (diagrammes de cas d’utili-
+sation et de classes) et l’architecture technique d´ etaill´ ee. Le quatri` eme chapitre d´ etaille la
+r´ ealisation globalede la plateforme, couvrant le d´ eveloppement du backend Laravel (base
+de donn´ ees, authentification, API), de l’application mobile React Native, ainsi que du dash-
+board administrateur React. Le cinqui` eme chapitre pr´ esente les tests, l’int´ egration finale et
+le d´ eploiement de la solution. Enfin, une conclusion g´ en´ erale synth´ etise les r´ esultats obtenus
+et ouvre sur les perspectives d’´ evolution du syst` eme.
+2
+
+--- Page 9 ---
+Chapitre1
+´ETUDE PR ´EALABLE
+Plan
+1.1 Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+1.2 Pr´ esentation g´ en´ erale de l’organisme d’accueil . . . . . . . . . . . 5
+1.2.1 Pr´ esentation de l’entreprise ExaDev . . . . . . . . . . . . . . . . . 5
+1.2.2 Services propos´ es . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+1.2.3 Localisation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+1.2.4 L’organigramme de l’entreprise . . . . . . . . . . . . . . . . . . . . 7
+1.2.5 Concepts de base : D´ eveloppement mobile et web . . . . . . . . . . 8
+1.3 Cadre g´ en´ eral du projet . . . . . . . . . . . . . . . . . . . . . . . . 10
+1.3.1 Probl´ ematique et motivation . . . . . . . . . . . . . . . . . . . . . 10
+1.3.2 ´Etude de l’existant . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+1.3.3 Solution propos´ ee : ANAS’ GYM . . . . . . . . . . . . . . . . . . . 14
+1.4 M´ ethodologie de travail . . . . . . . . . . . . . . . . . . . . . . . . . 19
+1.4.1 Rˆ oles d´ efinis dans le projet . . . . . . . . . . . . . . . . . . . . . . 19
+1.4.2 Processus Scrum adopt´ e . . . . . . . . . . . . . . . . . . . . . . . . 20
+1.4.3 Pilotage du projet avec Scrum . . . . . . . . . . . . . . . . . . . . 20
+1.4.4 Planification d´ etaill´ ee des sprints . . . . . . . . . . . . . . . . . . . 21
+1.5 Conclusion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+3
+
+--- Page 10 ---
+Chapitre 1. ´ETUDE PR ´EALABLE
+1.1 Introduction
+Ce chapitre explore notre projet ANAS’ GYM ` a travers plusieurs perspectives cl´ es, en
+commen¸ cant par une pr´ esentation d´ etaill´ ee de l’organisme d’accueil, ExaDev, suivie d’un
+aper¸ cu g´ en´ eral de notre plateforme compl` ete pour la gestion et l’am´ elioration de l’exp´ erience
+des membres dans les salles de sport multi-sites.
+Dans un premier temps, nous pr´ esenterons l’entreprise ExaDev, son organisation struc-
+turelle, ainsi que les diff´ erentes entit´ es qui composent cette organisation dynamique, avec un
+accent particulier sur le pˆ ole de d´ eveloppement, cadre principal de notre stage. Nous abor-
+derons ´ egalement les concepts fondamentaux n´ ecessaires ` a la compr´ ehension approfondie de
+notre projet, tels que le d´ eveloppement mobile multiplateforme, le d´ eveloppement web mo-
+derne, l’architecture client-serveur RESTful, ainsi que les technologies sp´ ecifiques utilis´ ees
+(React Native avec Expo, React pour le web, et Laravel avec Sanctum pour le backend).
+Dans un second temps, nous plongerons dans le cadre g´ en´ eral de notre projet ANAS’
+GYM en identifiant de mani` ere pr´ ecise les probl` emes rencontr´ es par les membres des salles
+de sport et les gestionnaires : l’absence d’historisation structur´ ee des entraˆ ınements quo-
+tidiens, la perte fr´ equente des donn´ ees corporelles essentielles, la difficult´ e ` a r´ eserver et se
+rappeler des cours collectifs, l’inaccessibilit´ e des informations d´ etaill´ ees sur les coachs et leurs
+disponibilit´ es, le manque de visibilit´ e sur les ´ equipements disponibles par local, ainsi que la
+complexit´ e inh´ erente ` a la gestion de plusieurs locaux sans syst` eme centralis´ e. Nous expo-
+serons ´ egalement la motivation profonde qui nous a conduit ` a d´ evelopper cette application
+innovante et r´ ealiserons une analyse comparative des solutions existantes sur le march´ e local
+et international.
+Nous pr´ esenterons ensuite la solution compl` ete propos´ ee, qui se compose d’une applica-
+tion mobile ergonomique pour les membres, d’un tableau de bord administrateur web cen-
+tralis´ e et d’une API backend robuste. Cette solution int´ egr´ ee permet d’historiser pr´ ecis´ ement
+les s´ eances d’entraˆ ınement avec tous leurs d´ etails (mouvements, machines, charges, s´ eries,
+r´ ep´ etitions), de suivre la progression corporelle des membres avec visualisations graphiques,
+de g´ erer efficacement les r´ eservations de cours collectifs avec notifications, de consulter les
+informations compl` etes sur les coachs (sp´ ecialit´ es, disponibilit´ es, vid´ eos), de visualiser les
+´ equipements disponibles par salle, tout en centralisant toutes les donn´ ees pour l’ensemble
+des locaux via un dashboard unique. Nous d´ etaillerons ´ egalement la m´ ethodologie de tra-
+vail agile adopt´ ee durant le stage, inspir´ ee des principes Scrum, permettant une planification
+it´ erative et un suivi efficace du d´ eveloppement par sprints.
+Enfin, ce chapitre ´ etablit les fondations n´ ecessaires pour une compr´ ehension approfondie
+4

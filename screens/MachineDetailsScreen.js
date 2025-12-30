@@ -38,22 +38,6 @@ const MachineDetailScreen = ({ route }) => {
         )}
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Charges disponibles</Text>
-        
-        {machine.charges && machine.charges.length > 0 ? (
-          machine.charges.map((charge, index) => (
-            <View key={index} style={styles.chargeItem}>
-              <Icon name="bolt" size={18} color="#FF3B30" />
-              <Text style={styles.chargeText}>
-                {charge.weight ? `${charge.weight} kg` : 'Poids non spécifié'}
-              </Text>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.noDataText}>Aucune charge disponible pour cette machine</Text>
-        )}
-      </View>
 
       {machine.video_url && (
         <TouchableOpacity style={styles.videoButton} activeOpacity={0.8} onPress={openVideo}>

@@ -318,6 +318,20 @@ const WorkoutListScreen = ({ navigation }) => {
         <Text style={styles.workoutNotes} numberOfLines={2}>
           "{item.notes || 'No notes'}"
         </Text>
+        <View style={styles.metaRow}>
+          {item.duration ? (
+            <View style={styles.metaPill}>
+              <Icon name="stopwatch" size={12} color="#FF3B30" />
+              <Text style={styles.metaText}>{item.duration} min</Text>
+            </View>
+          ) : null}
+          {item.water_consumption ? (
+            <View style={styles.metaPill}>
+              <Icon name="tint" size={12} color="#1E90FF" />
+              <Text style={styles.metaText}>{item.water_consumption} L</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
       <Icon name="chevron-right" size={22} color="#FF3B30" />
     </TouchableOpacity>
@@ -345,6 +359,7 @@ const WorkoutListScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>MY WORKOUTS</Text>
+      <Text style={styles.subTitle}>Curated list of your sessions with quick stats</Text>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
@@ -703,6 +718,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 2,
   },
+  subTitle: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginBottom: 18,
+  },
 
   // --- NEW SEARCH & SORT STYLES ---
   searchContainer: {
@@ -752,12 +773,12 @@ const styles = StyleSheet.create({
   },
   resultsContainer: {
     marginBottom: 15,
+    alignItems: 'center',
   },
   resultsText: {
     color: '#999',
     fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
+    fontWeight: '700',
   },
   emptyContainer: {
     flex: 1,
@@ -787,17 +808,17 @@ const styles = StyleSheet.create({
 
   workoutCard: {
     flexDirection: 'row',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: '#171717',
     padding: 18,
     marginBottom: 18,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    shadowColor: '#FF3B30',
-    shadowOpacity: 0.7,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
+    borderColor: '#262626',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
     alignItems: 'center',
   },
   cardIconContainer: {
@@ -812,19 +833,41 @@ const styles = StyleSheet.create({
   workoutTitle: { fontSize: 20, fontWeight: '900', color: '#FF3B30', marginBottom: 6 },
   workoutDate: { fontSize: 14, color: '#CCCCCC', marginBottom: 8, fontWeight: '600' },
   workoutNotes: { fontSize: 13, fontStyle: 'italic', color: '#999', marginBottom: 6 },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
+  metaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#1F1F1F',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  metaText: {
+    color: '#E5E7EB',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   addButton: {
     flexDirection: 'row',
     backgroundColor: '#FF3B30',
     paddingVertical: 16,
     borderRadius: 40,
-    marginBottom: 15,
+    marginBottom: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FF3B30',
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
   addButtonText: { color: '#121212', fontWeight: '900', fontSize: 20, marginLeft: 10 },
   errorText: { color: '#FF6F61', fontSize: 18, marginBottom: 20, textAlign: 'center', fontWeight: '700' },

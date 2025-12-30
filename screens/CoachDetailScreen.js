@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Image,
+  ImageBackground,
   TouchableOpacity,
   FlatList,
   Dimensions,
@@ -12,119 +13,80 @@ import {
   Alert,
 } from 'react-native';
 import { Video } from 'expo-av';
-import { Entypo, Ionicons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
+const DEFAULT_POSTER = 'https://via.placeholder.com/400x600/1A1A1A/FFFFFF?text=Video';
+const DAY_LABEL_WIDTH = 62;
+const HOUR_BLOCK_WIDTH = 64;
 
 const CoachDetailScreen = ({ route }) => {
   const { coach } = route.params;
-  const [localVideos, setLocalVideos] = useState([]);
+  const [activeVideoIndex, setActiveVideoIndex] = useState(null);
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 });
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (viewableItems?.length) {
+      const currentIndex = viewableItems[0].index ?? 0;
+      setActiveVideoIndex(currentIndex);
+    } else {
+      setActiveVideoIndex(null);
+    }
+  }).current;
 
-  // Function to detect video source type
+  const parseTimeToMinutes = (timeStr) => {
+    if (!timeStr || typeof timeStr !== 'string') return null;
+    const parts = timeStr.split(':').map((p) => parseInt(p, 10));
+    if (parts.length < 2 || Number.isNaN(parts[0])) return null;
+    const hours = parts[0];
+    const minutes = Number.isNaN(parts[1]) ? 0 : parts[1];
+    return hours * 60 + minutes;
+  };
+
   const getVideoSourceType = (url) => {
     if (!url) return 'unknown';
-    
-    // Local file (starts with file:// or no protocol)
-    if (url.startsWith('file://') || (!url.includes('http') && !url.includes('www'))) {
-      return 'local';
-    }
-    
-    // Google Drive
-    if (url.includes('drive.google.com')) {
-      return 'googledrive';
-    }
-    
-    // Dropbox
-    if (url.includes('dropbox.com')) {
-      return 'dropbox';
-    }
-    
-    // OneDrive
-    if (url.includes('onedrive.live.com') || url.includes('sharepoint.com')) {
-      return 'onedrive';
-    }
-    
-    // YouTube
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      return 'youtube';
-    }
-    
-    // Instagram
-    if (url.includes('instagram.com') || url.includes('instagr.am')) {
-      return 'instagram';
-    }
-    
-    // TikTok
-    if (url.includes('tiktok.com')) {
-      return 'tiktok';
-    }
-    
-    // Facebook
-    if (url.includes('facebook.com') || url.includes('fb.com')) {
-      return 'facebook';
-    }
-    
-    // Direct video file URLs (.mp4, .mov, .avi, etc.)
-    if (url.match(/\.(mp4|mov|avi|mkv|webm|m4v)(\?.*)?$/i)) {
-      return 'direct';
-    }
-    
-    // Default to web link
+    if (url.startsWith('file://') || (!url.includes('http') && !url.includes('www'))) return 'local';
+    if (url.includes('drive.google.com')) return 'googledrive';
+    if (url.includes('dropbox.com')) return 'dropbox';
+    if (url.includes('onedrive.live.com') || url.includes('sharepoint.com')) return 'onedrive';
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+    if (url.includes('instagram.com') || url.includes('instagr.am')) return 'instagram';
+    if (url.includes('tiktok.com')) return 'tiktok';
+    if (url.includes('facebook.com') || url.includes('fb.com')) return 'facebook';
+    if (url.match(/\.(mp4|mov|avi|mkv|webm|m4v)(\?.*)?$/i)) return 'direct';
     return 'web';
   };
 
-  // Function to get video thumbnail based on source
   const getVideoThumbnail = (url, sourceType) => {
     switch (sourceType) {
-      case 'youtube':
+      case 'youtube': {
         const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
         const videoId = youtubeMatch ? youtubeMatch[1] : null;
-        return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
-      
+        return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : DEFAULT_POSTER;
+      }
       case 'instagram':
-        // Try to extract thumbnail from Instagram URL
-        return url.replace('/p/', '/p/').replace('/?', '/media/?size=l') || 'https://via.placeholder.com/400x400/E4405F/white?text=Instagram';
-      
+        return 'https://via.placeholder.com/400x600/E4405F/white?text=Instagram+Video';
       case 'tiktok':
-        // For TikTok, we'll use the video URL itself as thumbnail (it will show first frame)
-        return url.includes('.mp4') ? url : 'https://via.placeholder.com/400x400/000000/white?text=TikTok';
-      
+        return 'https://via.placeholder.com/400x600/000000/white?text=TikTok+Video';
       case 'facebook':
-        // Facebook videos - try to use video URL
-        return url.includes('.mp4') ? url : 'https://via.placeholder.com/400x400/1877F2/white?text=Facebook';
-      
+        return 'https://via.placeholder.com/400x600/1877F2/white?text=Facebook+Video';
       case 'direct':
-        // For direct video URLs, use the video itself as thumbnail (shows first frame)
-        return url;
-      
-      case 'googledrive':
-        // For Google Drive, try to get thumbnail
+        return 'https://via.placeholder.com/400x600/2196F3/white?text=Video+Direct';
+      case 'googledrive': {
         const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
-        if (driveMatch) {
-          return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w400-h400`;
-        }
-        return 'https://via.placeholder.com/400x400/4285F4/white?text=Google+Drive';
-      
+        if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w400-h600`;
+        return 'https://via.placeholder.com/400x600/4285F4/white?text=Google+Drive';
+      }
       case 'dropbox':
-        // For Dropbox, use the video URL but replace dl=1 with raw=1 for thumbnail
-        return url.replace('dl=1', 'raw=1').replace('dl=0', 'raw=1');
-      
+        return 'https://via.placeholder.com/400x600/0061FF/white?text=Dropbox+Video';
       case 'onedrive':
-        // OneDrive thumbnail
-        return url.replace('/download', '/thumbnail').replace('/view', '/thumbnail');
-      
+        return 'https://via.placeholder.com/400x600/0078D4/white?text=OneDrive+Video';
+      case 'local':
+        return 'https://via.placeholder.com/400x600/4CAF50/white?text=Video+Locale';
       default:
-        // If it's a video URL, use it as thumbnail (will show first frame)
-        if (url.match(/\.(mp4|mov|avi|mkv|webm|m4v)(\?.*)?$/i)) {
-          return url;
-        }
-        return 'https://via.placeholder.com/400x400/333333/white?text=Video';
+        return DEFAULT_POSTER;
     }
   };
 
-  // Function to get platform icon
   const getPlatformIcon = (sourceType) => {
     switch (sourceType) {
       case 'youtube':
@@ -150,115 +112,187 @@ const CoachDetailScreen = ({ route }) => {
     }
   };
 
-  // Function to handle video press
-  const handleVideoPress = (videoUrl, sourceType) => {
-    if (sourceType === 'local' || sourceType === 'direct' || 
-        sourceType === 'googledrive' || sourceType === 'dropbox' || sourceType === 'onedrive') {
-      // These should play directly in the Video component or are direct files
-      return;
-    } else {
-      // Open external URLs in browser/app
-      Linking.openURL(videoUrl).catch(() => {
-        Alert.alert('Erreur', 'Impossible d\'ouvrir la vidéo');
-      });
-    }
+  const handleExternalVideoPress = (videoUrl) => {
+    Linking.openURL(videoUrl).catch(() => {
+      Alert.alert('Erreur', 'Impossible d\'ouvrir la video');
+    });
   };
 
-  // Function to pick local video
-  const pickLocalVideo = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'video/*',
-        copyToCacheDirectory: true,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const video = result.assets[0];
-        const newVideo = {
-          id: Date.now(),
-          title: video.name || 'Video Local',
-          description: 'Vidéo ajoutée depuis l\'appareil',
-          video_url: video.uri,
-        };
-        
-        setLocalVideos(prev => [...prev, newVideo]);
-        Alert.alert('Succès', 'Vidéo ajoutée avec succès!');
-      }
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de sélectionner la vidéo');
-    }
-  };
-
-  const renderVideoItem = ({ item }) => {
+  const renderVideoItem = ({ item, index }) => {
     const sourceType = getVideoSourceType(item.video_url);
     const platformIcon = getPlatformIcon(sourceType);
-    
-    // For local files, direct video URLs, and cloud storage, use Video component
-    if (sourceType === 'local' || sourceType === 'direct' || 
-        sourceType === 'googledrive' || sourceType === 'dropbox' || sourceType === 'onedrive') {
+    const thumbnailUrl = getVideoThumbnail(item.video_url, sourceType);
+    const posterUrl = item.poster_url || item.thumbnail_url || thumbnailUrl || DEFAULT_POSTER;
+    const isPlaying = activeVideoIndex === index;
+    const isPlayableInline = sourceType === 'local' || sourceType === 'direct' ||
+      sourceType === 'googledrive' || sourceType === 'dropbox' || sourceType === 'onedrive';
+
+    if (isPlayableInline) {
       return (
         <View style={styles.reelCard}>
-          <Video
-            source={{ uri: item.video_url }}
-            style={styles.reelVideo}
-            useNativeControls
-            resizeMode="cover"
-            isLooping={false}
-            shouldPlay={false}
-          />
-          <View style={styles.platformBadge}>
-            <Ionicons name={platformIcon.name} size={16} color={platformIcon.color} />
-            <Text style={styles.platformText}>
-              {sourceType === 'local' ? 'Local' : 
-               sourceType === 'googledrive' ? 'Google Drive' :
-               sourceType === 'dropbox' ? 'Dropbox' :
-               sourceType === 'onedrive' ? 'OneDrive' : 'Vidéo'}
-            </Text>
+          <View style={styles.videoContainer}>
+            {isPlaying ? (
+              <Video
+                source={{ uri: item.video_url }}
+                style={styles.reelVideo}
+                useNativeControls
+                resizeMode="cover"
+                isLooping
+                shouldPlay
+                posterSource={{ uri: posterUrl }}
+                posterStyle={styles.reelVideo}
+                usePoster
+              />
+            ) : (
+              <ImageBackground
+                source={{ uri: posterUrl }}
+                style={styles.posterFrame}
+                imageStyle={styles.posterImage}
+              >
+                <View style={styles.posterTint} />
+              </ImageBackground>
+            )}
+
+            <TouchableOpacity
+              style={styles.videoTapArea}
+              onPress={() => {
+                if (isPlaying) {
+                  setActiveVideoIndex(null);
+                } else {
+                  setActiveVideoIndex(index);
+                }
+              }}
+              activeOpacity={1}
+            >
+              <View style={[styles.playOverlay, isPlaying && styles.playOverlayActive]}>
+                {!isPlaying && (
+                  <>
+                    <View style={[styles.playButton, { backgroundColor: platformIcon.color }]}>
+                      <Ionicons name="play" size={40} color="#fff" />
+                    </View>
+                    <Text style={styles.tapToPlayText}>Appuyez pour lire</Text>
+                  </>
+                )}
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.platformLabel}>
+              <Ionicons name={platformIcon.name} size={16} color={platformIcon.color} />
+              <Text style={styles.platformLabelText}>
+                {sourceType === 'local' ? 'Local' :
+                 sourceType === 'googledrive' ? 'Drive' :
+                 sourceType === 'dropbox' ? 'Dropbox' :
+                 sourceType === 'onedrive' ? 'OneDrive' : 'Video'}
+              </Text>
+            </View>
           </View>
-          <Text style={styles.reelTitle}>{item.title}</Text>
-          <Text style={styles.reelDesc}>{item.description}</Text>
+
+          <View style={styles.videoInfo}>
+            <Text style={styles.reelTitle} numberOfLines={1}>{item.title}</Text>
+            {item.description && (
+              <Text style={styles.reelDesc} numberOfLines={2}>{item.description}</Text>
+            )}
+          </View>
         </View>
       );
     }
-    
-    // For external platforms, show thumbnail with play button
-    const thumbnailUrl = getVideoThumbnail(item.video_url, sourceType);
-    
+
     return (
       <View style={styles.reelCard}>
-        <TouchableOpacity 
-          style={styles.thumbnailContainer}
-          onPress={() => handleVideoPress(item.video_url, sourceType)}
+        <TouchableOpacity
+          style={styles.videoContainer}
+          onPress={() => handleExternalVideoPress(item.video_url)}
+          activeOpacity={0.9}
         >
-          <Image
-            source={{ uri: thumbnailUrl }}
-            style={styles.thumbnail}
-            resizeMode="cover"
-          />
-          <View style={styles.playButtonContainer}>
-            <View style={[styles.playButton, { backgroundColor: platformIcon.color }]}>
-              <Ionicons name="play" size={24} color="#fff" />
+          <ImageBackground
+            source={{ uri: posterUrl }}
+            style={styles.posterFrame}
+            imageStyle={styles.posterImage}
+          >
+            <View style={styles.posterTint} />
+          </ImageBackground>
+
+          <View style={styles.playOverlay}>
+            <View style={[
+              styles.playButton,
+              { backgroundColor: platformIcon.color, shadowColor: platformIcon.color }
+            ]}>
+              <Ionicons name="play" size={40} color="#fff" />
             </View>
+            <Text style={styles.tapToPlayText}>Ouvrir dans {
+              sourceType === 'youtube' ? 'YouTube' :
+              sourceType === 'tiktok' ? 'TikTok' :
+              sourceType === 'instagram' ? 'Instagram' :
+              sourceType === 'facebook' ? 'Facebook' : 'le navigateur'
+            }</Text>
           </View>
+
           <View style={styles.platformLabel}>
-            <Ionicons name={platformIcon.name} size={18} color={platformIcon.color} />
+            <Ionicons name={platformIcon.name} size={16} color={platformIcon.color} />
             <Text style={styles.platformLabelText}>
-              {sourceType.charAt(0).toUpperCase() + sourceType.slice(1)}
+              {sourceType === 'youtube' ? 'YouTube' :
+               sourceType === 'tiktok' ? 'TikTok' :
+               sourceType === 'instagram' ? 'Instagram' :
+               sourceType === 'facebook' ? 'Facebook' : 'Web'}
             </Text>
           </View>
         </TouchableOpacity>
-        <Text style={styles.reelTitle}>{item.title}</Text>
-        <Text style={styles.reelDesc}>{item.description}</Text>
+
+        <View style={styles.videoInfo}>
+          <Text style={styles.reelTitle} numberOfLines={1}>{item.title}</Text>
+          {item.description && (
+            <Text style={styles.reelDesc} numberOfLines={2}>{item.description}</Text>
+          )}
+        </View>
       </View>
     );
   };
 
-  // Combine coach videos with local videos
-  const allVideos = [...(coach.videos || []), ...localVideos];
+  const allVideos = coach.videos || [];
+
+  const weekOrder = [
+    { key: 'monday', label: 'Lun' },
+    { key: 'tuesday', label: 'Mar' },
+    { key: 'wednesday', label: 'Mer' },
+    { key: 'thursday', label: 'Jeu' },
+    { key: 'friday', label: 'Ven' },
+    { key: 'saturday', label: 'Sam' },
+    { key: 'sunday', label: 'Dim' },
+  ];
+
+  const normalizedSlots = (coach.availabilities || [])
+    .map((a) => {
+      const start = parseTimeToMinutes(a.start_time);
+      const end = parseTimeToMinutes(a.end_time);
+      if (start === null || end === null || Number.isNaN(start) || Number.isNaN(end)) return null;
+      const key = (a.day_of_week || '').toLowerCase();
+      return { ...a, start, end, day_key: key };
+    })
+    .filter(Boolean);
+
+  const minStart = normalizedSlots.length ? Math.min(...normalizedSlots.map((s) => s.start)) : 8 * 60;
+  const maxEnd = normalizedSlots.length ? Math.max(...normalizedSlots.map((s) => s.end)) : 18 * 60;
+  const startHour = Math.min(6, Math.floor(minStart / 60));
+  const endHour = Math.max(22, Math.ceil(maxEnd / 60));
+  const totalHours = Math.max(endHour - startHour, 1);
+  const timelineWidth = totalHours * HOUR_BLOCK_WIDTH;
+  const hourMarks = Array.from({ length: totalHours + 1 }).map((_, idx) => {
+    const hour = startHour + idx;
+    return { hour, label: `${hour.toString().padStart(2, '0')}h` };
+  });
+
+  const schedule = weekOrder.map((day) => {
+    const slots = normalizedSlots
+      .filter((slot) => {
+        const key = slot.day_key;
+        return key.startsWith(day.key.slice(0, 3)) || key === day.key;
+      })
+      .sort((a, b) => a.start - b.start);
+    return { ...day, slots };
+  });
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Hero Section */}
       <View style={styles.heroSection}>
         <Image
           source={{ uri: coach.photo_url ? coach.photo_url : 'https://via.placeholder.com/150' }}
@@ -270,7 +304,6 @@ const CoachDetailScreen = ({ route }) => {
         </Text>
       </View>
 
-      {/* Contact */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Ionicons name="call" size={20} color="#FF3B30" />
@@ -291,13 +324,12 @@ const CoachDetailScreen = ({ route }) => {
             onPress={() => Linking.openURL(`tel:${coach.phone}`)}
           >
             <Ionicons name="call" size={24} color="#00FF88" />
-            <Text style={styles.contactLabel}>Téléphone</Text>
+            <Text style={styles.contactLabel}>Telephone</Text>
             <Text style={styles.contactValue}>{coach.phone}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Bio */}
       {coach.bio && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -310,7 +342,6 @@ const CoachDetailScreen = ({ route }) => {
         </View>
       )}
 
-      {/* Certifications */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Ionicons name="school" size={20} color="#FF3B30" />
@@ -321,56 +352,89 @@ const CoachDetailScreen = ({ route }) => {
         </View>
       </View>
 
-      {/* Availability */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Ionicons name="calendar" size={20} color="#FF3B30" />
-          <Text style={styles.sectionTitle}> Disponibilités</Text>
+          <Text style={styles.sectionTitle}> Disponibilites</Text>
         </View>
-        <View style={styles.availContainer}>
-          {coach.availabilities?.length > 0 ? (
-            coach.availabilities.map((a, i) => (
-              <View key={i} style={styles.availBadge}>
-                <Entypo name="calendar" size={14} color="#fff" />
-                <Text style={styles.availText}>
-                  {' '}
-                  {a.day_of_week.charAt(0).toUpperCase() + a.day_of_week.slice(1)}: {a.start_time} - {a.end_time}
-                </Text>
+        {coach.availabilities?.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View>
+              <View style={styles.hourHeaderRow}>
+                <View style={{ width: DAY_LABEL_WIDTH }} />
+                <View style={[styles.hourTrack, { width: timelineWidth }]}>
+                  {hourMarks.map((mark, idx) => (
+                    <View key={mark.hour} style={[styles.hourMark, { left: idx * HOUR_BLOCK_WIDTH }]}>
+                      <Text style={styles.hourLabel}>{mark.label}</Text>
+                      <View style={styles.hourLine} />
+                    </View>
+                  ))}
+                </View>
               </View>
-            ))
-          ) : (
-            <Text style={styles.infoText}>No availability listed.</Text>
-          )}
-        </View>
+
+              {schedule.map((day) => (
+                <View key={day.key} style={styles.dayRow}>
+                  <View style={[styles.dayLabelCell, { width: DAY_LABEL_WIDTH }]}>
+                    <Text style={styles.dayLabel}>{day.label}</Text>
+                  </View>
+                  <View style={[styles.dayTimeline, { width: timelineWidth }]}>
+                    {hourMarks.map((_, idx) => (
+                      <View key={idx} style={[styles.guideline, { left: idx * HOUR_BLOCK_WIDTH }]} />
+                    ))}
+                    {day.slots.length > 0 ? (
+                      day.slots.map((slot, idx) => {
+                        const left = ((slot.start - startHour * 60) / 60) * HOUR_BLOCK_WIDTH;
+                        const widthPx = ((slot.end - slot.start) / 60) * HOUR_BLOCK_WIDTH;
+                        return (
+                          <View
+                            key={idx}
+                            style={[
+                              styles.slotBlock,
+                              { left, width: Math.max(widthPx, 36) },
+                            ]}
+                          >
+                            <Text style={styles.slotText}>{slot.start_time} - {slot.end_time}</Text>
+                          </View>
+                        );
+                      })
+                    ) : (
+                      <Text style={styles.offText}>Off</Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        ) : (
+          <Text style={styles.infoText}>No availability listed.</Text>
+        )}
       </View>
 
-      {/* Video Gallery */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Ionicons name="videocam" size={20} color="#FF3B30" />
-          <Text style={styles.sectionTitle}> Vidéos du coach</Text>
-          <TouchableOpacity 
-            style={styles.addVideoButton}
-            onPress={pickLocalVideo}
-          >
-            <Ionicons name="add-circle" size={24} color="#4CAF50" />
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}> Videos du coach</Text>
         </View>
         
         {allVideos.length > 0 ? (
           <FlatList
             data={allVideos}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item, index) => (item.id ? item.id.toString() : index.toString())}
             renderItem={renderVideoItem}
-            scrollEnabled={false}
+            horizontal
+            pagingEnabled
+            snapToInterval={width * 0.88}
+            snapToAlignment="center"
+            decelerationRate="fast"
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.reelListContent}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig.current}
           />
         ) : (
           <View style={styles.noVideosContainer}>
             <Ionicons name="videocam-off" size={48} color="#666" />
-            <Text style={styles.noVideosText}>Aucune vidéo disponible</Text>
-            <TouchableOpacity style={styles.addFirstVideoButton} onPress={pickLocalVideo}>
-              <Text style={styles.addFirstVideoText}>Ajouter une vidéo</Text>
-            </TouchableOpacity>
+            <Text style={styles.noVideosText}>Aucune video disponible</Text>
           </View>
         )}
       </View>
@@ -389,12 +453,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     alignItems: 'center', 
     marginBottom: 10,
-    justifyContent: 'space-between'
   },
   sectionTitle: { marginLeft: 8, color: '#FF3B30', fontSize: 18, fontWeight: 'bold', flex: 1 },
-  addVideoButton: {
-    padding: 5,
-  },
   contactGrid: { flexDirection: 'row', justifyContent: 'space-between' },
   contactCard: { 
     width: '48%', 
@@ -407,46 +467,115 @@ const styles = StyleSheet.create({
   contactValue: { color: '#FFFFFF', fontSize: 12, marginTop: 2 },
   bioCard: { backgroundColor: '#1E1E1E', padding: 15, borderRadius: 10 },
   infoText: { color: '#CCCCCC', lineHeight: 20 },
-  availContainer: { marginTop: 10 },
-  availBadge: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#333', 
-    padding: 12, 
-    borderRadius: 8, 
-    marginBottom: 8 
+  hourHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 6,
   },
-  availText: { color: '#fff', marginLeft: 8, fontSize: 14 },
-  reelCard: { 
-    backgroundColor: '#1A1A1A', 
-    borderRadius: 15, 
-    padding: 15, 
-    marginBottom: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  reelVideo: { 
-    width: '100%', 
-    height: 250, 
-    borderRadius: 10, 
-    backgroundColor: '#000' 
-  },
-  thumbnailContainer: {
+  hourTrack: {
+    height: 26,
     position: 'relative',
-    width: '100%',
-    height: 250,
+  },
+  hourMark: {
+    position: 'absolute',
+    alignItems: 'center',
+  },
+  hourLabel: {
+    color: '#888',
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  hourLine: {
+    width: 1,
+    height: 10,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  dayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  dayLabelCell: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  dayLabel: {
+    color: '#FF3B30',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  dayTimeline: {
+    position: 'relative',
+    height: 46,
+    backgroundColor: '#1E1E1E',
     borderRadius: 10,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-  thumbnail: {
+  guideline: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  slotBlock: {
+    position: 'absolute',
+    top: 6,
+    bottom: 6,
+    backgroundColor: 'rgba(255,59,48,0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,48,0.4)',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  slotText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  offText: {
+    color: '#777',
+    fontSize: 12,
+    fontStyle: 'italic',
+    paddingHorizontal: 8,
+  },
+  
+  reelCard: { 
+    backgroundColor: '#1A1A1A', 
+    borderRadius: 20, 
+    marginBottom: 20,
+    width: width * 0.85,
+    marginRight: 16,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    overflow: 'hidden',
+  },
+  videoContainer: {
+    position: 'relative',
+    width: '100%',
+    height: width * 1.3,
+    backgroundColor: '#000',
+  },
+  reelVideo: { 
     width: '100%',
     height: '100%',
-    backgroundColor: '#333',
+    backgroundColor: '#000',
   },
-  playButtonContainer: {
+  videoTapArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  playOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -454,61 +583,70 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.32)',
+  },
+  playOverlayActive: {
+    backgroundColor: 'transparent',
   },
   playButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  tapToPlayText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 16,
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   platformLabel: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 15,
+    right: 15,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(0,0,0,0.85)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   platformLabelText: {
     color: '#fff',
     fontSize: 12,
-    marginLeft: 6,
-    fontWeight: 'bold',
+    marginLeft: 5,
+    fontWeight: '700',
   },
-  platformBadge: {
-    position: 'absolute',
-    top: 25,
-    right: 25,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 15,
-  },
-  platformText: {
-    color: '#fff',
-    fontSize: 11,
-    marginLeft: 4,
-    fontWeight: 'bold',
+  videoInfo: {
+    padding: 16,
   },
   reelTitle: { 
-    color: '#FF3B30', 
-    fontSize: 16, 
-    fontWeight: 'bold', 
-    marginTop: 12 
+    color: '#FFFFFF', 
+    fontSize: 17, 
+    fontWeight: '700', 
+    marginBottom: 6,
   },
   reelDesc: { 
-    color: '#CCCCCC', 
+    color: '#999', 
     fontSize: 14, 
-    marginTop: 6,
-    lineHeight: 18 
+    lineHeight: 18,
+  },
+  reelListContent: {
+    paddingVertical: 10,
+    paddingRight: 16,
   },
   noVideosContainer: {
     alignItems: 'center',
@@ -520,17 +658,20 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 16,
     marginTop: 10,
-    marginBottom: 20,
   },
-  addFirstVideoButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+  posterFrame: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#0f0f0f',
   },
-  addFirstVideoText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  posterImage: {
+    width: '100%',
+    height: '100%',
+  },
+  posterTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.25)',
   },
 });
+
 export default CoachDetailScreen;

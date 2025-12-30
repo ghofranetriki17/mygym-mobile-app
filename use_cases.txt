@@ -1,0 +1,20 @@
+Mobile app (React Native / Expo) – client use cases
+- Auth & profile: signup/login, view/edit profile, logout.
+- Gyms & map: browse branches, view details (address, phone, hours), open map view.
+- Workouts: create/list/update workouts, attach exercises, mark done, reorder sets, track achievements, view workout details.
+- Exercises: view movement details, view machine details, open demo video.
+- Programs & progress: view programs, track progression/metrics, see upcoming sessions.
+- Videos & media: view coach reels/videos, open external links.
+- Bookings: list upcoming bookings, open session details, book/cancel group sessions (when enabled).
+- Coaches: view coach profiles (bio, contact, specialties, availability).
+- Notifications: open notifications screen.
+
+Admin dashboard (React, repo: C:\Users\ghofr\Downloads\react-admin-dashboard (1)\react-admin-dashboard>)
+- Auth admin: login/logout.
+- Users: manage user accounts.
+- Branches: create/edit branches, manage locations and hours.
+- Equipment: manage machines, charges, movements, categories (machines <-> charges <-> movements).
+- Workouts/programs: manage workouts, exercises, and training programs.
+- Coaches: create/edit coach profiles, specialties, availabilities, media links.
+- Group sessions: create/edit group training sessions, manage bookings.
+- Public parameters: manage app-wide settings (app name, hero image, opening hours, contact info, social links).
