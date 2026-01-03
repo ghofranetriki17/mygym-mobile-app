@@ -208,8 +208,13 @@ export const branchAPI = {
 };
 
 export const programmeAPI = {
-  getAll: () => api.get('/programmes'),
-  activate: (id) => api.post(`/programmes/${id}/activate`),
+  getAll: () => api.get('/programmes').then(res => res.data.data || res.data),
+  getById: (id) => api.get(`/programmes/${id}`).then(res => res.data.data || res.data),
+  create: (data) => api.post('/programmes', data).then(res => res.data),
+  syncWorkouts: (programmeId, workouts) =>
+    api.post(`/programmes/${programmeId}/workouts`, { workouts }).then(res => res.data),
+  activate: (id) => api.post(`/programmes/${id}/activate`).then(res => res.data),
+  delete: (id) => api.delete(`/programmes/${id}`).then(res => res.data),
 };
 
 export const attachExerciseToWorkout = (workoutId, exerciseId) => {

@@ -517,6 +517,12 @@ const HomeScreen = ({ navigation }) => {
         >
           <FontAwesome name="heartbeat" size={22} color="white" />
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.fab}
+          onPress={() => navigation.navigate('Programmes')}
+        >
+          <FontAwesome name="list-alt" size={22} color="white" />
+        </TouchableOpacity>
       </View>
 
       {/* Bookings Modal */}

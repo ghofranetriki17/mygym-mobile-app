@@ -17,6 +17,8 @@ import CoachDetailScreen from './screens/CoachDetailScreen';
 import SessionDetail from './screens/SessionDetail';
 import BranchMapScreen from './screens/BranchMapScreen';
 import NotificationsScreen from './screens/NotificationsScreen';
+import ProgrammesScreen from './screens/ProgrammesScreen';
+import ProgrammeDetailScreen from './screens/ProgrammeDetailScreen';
 
 const Stack = createStackNavigator();
 
@@ -49,6 +51,17 @@ export default function App() {
   name="WorkoutList"
   component={WorkoutListScreen}
   options={{ title: 'My Workouts' }}
+/>
+<Stack.Screen
+  name="Programmes"
+  component={ProgrammesScreen}
+  options={{ title: 'Programmes' }}
+/>
+
+<Stack.Screen
+  name="ProgrammeDetail"
+  component={ProgrammeDetailScreen}
+  options={{ title: 'Programme Details' }}
 />
 
         <Stack.Screen 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -20,13 +20,34 @@ const getAchievementNote = (value) => {
   return 'Not started';
 };
 
-const WorkoutDetailsScreen = ({ route, navigation }) => {
-  const { workout: initialWorkout } = route.params;
-  const [workout, setWorkout] = useState(initialWorkout);
+const WorkoutDetailsScreen = ({ route }) => {
+  const { workout: initialWorkout, workoutId } = route.params || {};
+  const [workout, setWorkout] = useState(initialWorkout || null);
   const [orderEdits, setOrderEdits] = useState({});
+  const [loading, setLoading] = useState(!initialWorkout);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const needFetch = !workout?.exercises && (workoutId || workout?.id);
+    if (!needFetch) return;
+    const id = workoutId || workout?.id;
+    const fetchWorkout = async () => {
+      setLoading(true);
+      try {
+        const data = await workoutAPI.getById(id);
+        setWorkout(data);
+        setError(null);
+      } catch (e) {
+        setError('Failed to load workout details');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWorkout();
+  }, [workoutId, workout]);
 
   const completionRate = useMemo(() => {
-    const total = workout.exercises?.length || 0;
+    const total = workout?.exercises?.length || 0;
     if (!total) return 0;
     const done = workout.exercises.filter((ex) => ex.pivot?.is_done).length;
     return Math.round((done / total) * 100);

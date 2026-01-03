@@ -495,6 +495,10 @@ const WorkoutListScreen = ({ navigation }) => {
         <Text style={styles.resultsText}>
           {filteredAndSortedWorkouts.length} workout{filteredAndSortedWorkouts.length !== 1 ? 's' : ''} found
         </Text>
+        <TouchableOpacity style={styles.programmesButton} onPress={() => navigation.navigate('Programmes')}>
+          <Icon name="list-alt" size={14} color="#121212" />
+          <Text style={styles.programmesButtonText}>Programmes</Text>
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -948,11 +952,27 @@ const styles = StyleSheet.create({
   resultsContainer: {
     marginBottom: 15,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   resultsText: {
     color: '#999',
     fontSize: 14,
     fontWeight: '700',
+  },
+  programmesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+    gap: 6,
+  },
+  programmesButtonText: {
+    color: '#121212',
+    fontWeight: '800',
+    fontSize: 14,
   },
   emptyContainer: {
     flex: 1,
