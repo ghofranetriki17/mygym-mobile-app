@@ -16,7 +16,7 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
-import { workoutAPI, exerciseAPI, machineAPI } from '../services/api';
+import { workoutAPI, exerciseAPI, machineAPI, branchAPI } from '../services/api';
 
 const WorkoutListScreen = ({ navigation }) => {
   // États généraux
@@ -43,17 +43,25 @@ const WorkoutListScreen = ({ navigation }) => {
 
   // Form exercise
   const [newExercise, setNewExercise] = useState({ name: '', sets: '', reps: '', order: '' });
-  const [title, setTitle] = useState('');
+  const [coachName, setCoachName] = useState('');
   const [instructions, setInstructions] = useState('');
 
   // Datas machines, mouvements, charges
   const [machines, setMachines] = useState([]);
   const [movements, setMovements] = useState([]);
   const [charges, setCharges] = useState([]);
+  const [coaches, setCoaches] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [selectedMovement, setSelectedMovement] = useState(null);
   const [selectedCharge, setSelectedCharge] = useState(null);
+  const [selectedCoach, setSelectedCoach] = useState(null);
+  const [selectedBranch, setSelectedBranch] = useState(null);
+  const [trainingLocation, setTrainingLocation] = useState(null); // 'home' or 'branch'
   const [loadingCharges, setLoadingCharges] = useState(false);
+  const [loadingCoaches, setLoadingCoaches] = useState(false);
+  const [loadingMachines, setLoadingMachines] = useState(false);
+  const [loadingBranches, setLoadingBranches] = useState(false);
 
   // États d'enregistrement
   const [savingWorkout, setSavingWorkout] = useState(false);
@@ -64,10 +72,10 @@ const WorkoutListScreen = ({ navigation }) => {
     fetchWorkouts();
   }, []);
 
-  // Charge machines + mouvements + reset form exercise quand le modal s'ouvre
+  // Charge branches + mouvements + reset form exercise quand le modal s'ouvre
   useEffect(() => {
     if (modalExerciseVisible) {
-      loadMachines();
+      loadBranches();
       loadMovements();
       resetExerciseForm();
     }
@@ -112,6 +120,24 @@ const WorkoutListScreen = ({ navigation }) => {
     return sorted;
   }, [workouts, searchQuery, sortOrder]);
 
+  const formatWorkoutDate = (workout) => {
+    const raw = workout.date || workout.created_at;
+    if (!raw) return 'Date N/A';
+    try {
+      const d = new Date(raw);
+      if (Number.isNaN(d.getTime())) return raw;
+      return d.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return raw;
+    }
+  };
+
   // Fonction fetch workouts
   const fetchWorkouts = async () => {
     setLoading(true);
@@ -126,13 +152,58 @@ const WorkoutListScreen = ({ navigation }) => {
     }
   };
 
-  // Load machines pour exercise form
-  const loadMachines = async () => {
+  // Load branches pour choix de localisation
+  const loadBranches = async () => {
+    setLoadingBranches(true);
     try {
-      const data = await machineAPI.getAll();
+      const response = await branchAPI.getAll();
+      setBranches(response.data || []);
+    } catch {
+      Alert.alert('Error', 'Failed to load branches');
+    } finally {
+      setLoadingBranches(false);
+    }
+  };
+
+  // Load machines selon localisation (home = toutes, branch = filtrées)
+  const loadMachinesForLocation = async (branchId = null) => {
+    setLoadingMachines(true);
+    try {
+      let data;
+      if (branchId) {
+        const response = await machineAPI.getByBranch(branchId);
+        data = response.data?.data || response.data || [];
+      } else {
+        data = await machineAPI.getAll();
+      }
       setMachines(data);
+      setSelectedMachine(null);
+      setCharges([]);
+      setSelectedCharge(null);
     } catch {
       Alert.alert('Error', 'Failed to load machines');
+      setMachines([]);
+    } finally {
+      setLoadingMachines(false);
+    }
+  };
+
+  // Load coaches pour branch sélectionnée
+  const loadCoachesForBranch = async (branchId) => {
+    setLoadingCoaches(true);
+    try {
+      const data = await branchAPI.getCoaches(branchId);
+      const list =
+        (Array.isArray(data?.data?.data) && data?.data?.data) ||
+        (Array.isArray(data?.data) && data?.data) ||
+        (Array.isArray(data) && data) ||
+        [];
+      setCoaches(list);
+    } catch {
+      Alert.alert('Error', 'Failed to load coaches for this branch');
+      setCoaches([]);
+    } finally {
+      setLoadingCoaches(false);
     }
   };
 
@@ -162,11 +233,17 @@ const WorkoutListScreen = ({ navigation }) => {
   // Reset formulaire création exercise
   const resetExerciseForm = () => {
     setNewExercise({ name: '', sets: '', reps: '' });
-    setTitle('');
+    setCoachName('');
     setInstructions('');
     setSelectedMachine(null);
     setSelectedMovement(null);
     setSelectedCharge(null);
+    setSelectedCoach(null);
+    setSelectedBranch(null);
+    setTrainingLocation(null);
+    setMachines([]);
+    setCharges([]);
+    setCoaches([]);
   };
 
   // Reset formulaire création workout
@@ -197,6 +274,25 @@ const WorkoutListScreen = ({ navigation }) => {
   // Gestion input exercise
   const handleExerciseInputChange = (field, value) => {
     setNewExercise((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Gestion localisation pour machines
+  const handleSelectHome = () => {
+    setTrainingLocation('home');
+    setSelectedBranch(null);
+    setSelectedCoach(null);
+    setCoachName('');
+    setCoaches([]);
+    loadMachinesForLocation(null);
+  };
+
+  const handleSelectBranch = (branch) => {
+    setTrainingLocation('branch');
+    setSelectedBranch(branch);
+    setSelectedCoach(null);
+    setCoachName('');
+    loadMachinesForLocation(branch.id);
+    loadCoachesForBranch(branch.id);
   };
 
   // Création workout
@@ -239,7 +335,7 @@ const WorkoutListScreen = ({ navigation }) => {
 
     const exerciseData = {
       name: newExercise.name.trim(),
-      title: title.trim() || null,
+      title: coachName.trim() || null, // stored as text for traceability
       sets: Number(newExercise.sets),
       reps: Number(newExercise.reps),
       machine_id: selectedMachine ? selectedMachine.id : null,
@@ -266,7 +362,7 @@ const WorkoutListScreen = ({ navigation }) => {
   };
 
   // Composant SelectInput simple
-  const SelectInput = ({ label, data, selectedValue, onSelect, keyExtractor, labelExtractor }) => (
+  const SelectInput = ({ label, data, selectedValue, onSelect, keyExtractor, labelExtractor, emptyMessage }) => (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
       <ScrollView
@@ -276,7 +372,7 @@ const WorkoutListScreen = ({ navigation }) => {
         horizontal={false}
       >
         {data.length === 0 ? (
-          <Text style={styles.noDataText}>No options available</Text>
+          <Text style={styles.noDataText}>{emptyMessage || 'No options available'}</Text>
         ) : (
           data.map((item) => {
             const key = String(keyExtractor(item));
@@ -314,7 +410,7 @@ const WorkoutListScreen = ({ navigation }) => {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.workoutTitle}>{item.title.toUpperCase()}</Text>
-        <Text style={styles.workoutDate}>{item.date || 'Date N/A'}</Text>
+        <Text style={styles.workoutDate}>{formatWorkoutDate(item)}</Text>
         <Text style={styles.workoutNotes} numberOfLines={2}>
           "{item.notes || 'No notes'}"
         </Text>
@@ -585,28 +681,106 @@ const WorkoutListScreen = ({ navigation }) => {
                   />
                 </View>
 
-                {/* Title */}
+                {/* Localisation pour filtrer les machines */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Title (optional)</Text>
+                  <Text style={styles.label}>Where are you training?</Text>
+                  <View style={styles.locationButtonsRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.locationButton,
+                        trainingLocation === 'home' && styles.locationButtonActive,
+                      ]}
+                      onPress={handleSelectHome}
+                      activeOpacity={0.8}
+                    >
+                      <Icon
+                        name="home"
+                        size={16}
+                        color={trainingLocation === 'home' ? '#121212' : '#FF3B30'}
+                      />
+                      <Text
+                        style={[
+                          styles.locationButtonText,
+                          trainingLocation === 'home' && styles.locationButtonTextActive,
+                        ]}
+                      >
+                        At Home
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.helperText}>
+                    Pick your branch to see its machines, or choose Home to load everything.
+                  </Text>
+                </View>
+
+                {loadingBranches ? (
+                  <ActivityIndicator size="small" color="#FF3B30" style={{ marginBottom: 12 }} />
+                ) : (
+                  <SelectInput
+                    label="Select Branch (gym)"
+                    data={branches}
+                    selectedValue={selectedBranch}
+                    onSelect={handleSelectBranch}
+                    keyExtractor={(item) => item.id}
+                    labelExtractor={(item) => item.name || `Branch ${item.id}`}
+                    emptyMessage="No branches available"
+                  />
+                )}
+
+                {/* Coach name (for traceability, no relation) */}
+                {trainingLocation === 'branch' && (
+                  loadingCoaches ? (
+                    <ActivityIndicator size="small" color="#FF3B30" style={{ marginVertical: 10 }} />
+                  ) : (
+                    <SelectInput
+                      label="Coach Name (select)"
+                      data={coaches}
+                      selectedValue={selectedCoach}
+                      onSelect={(coach) => {
+                        setSelectedCoach(coach);
+                        setCoachName(coach.name || coach.full_name || '');
+                      }}
+                      keyExtractor={(item) => item.id}
+                      labelExtractor={(item) => item.name || item.full_name || `Coach ${item.id}`}
+                      emptyMessage={selectedBranch ? 'No coaches for this branch' : 'Select a branch first'}
+                    />
+                  )
+                )}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Coach Name (manual)</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter title"
+                    placeholder="Enter coach name or type your own"
                     placeholderTextColor="#999"
-                    value={title}
-                    onChangeText={setTitle}
+                    value={coachName}
+                    onChangeText={(text) => {
+                      setCoachName(text);
+                      setSelectedCoach(null);
+                    }}
                     selectionColor="#FF3B30"
                   />
+                  <Text style={styles.helperText}>Selection is stored as plain text for traceability.</Text>
                 </View>
 
                 {/* Select Machine */}
-                <SelectInput
-                  label="Select Machine"
-                  data={machines}
-                  selectedValue={selectedMachine}
-                  onSelect={setSelectedMachine}
-                  keyExtractor={(item) => item.id}
-                  labelExtractor={(item) => item.name}
-                />
+                {loadingMachines ? (
+                  <ActivityIndicator size="small" color="#FF3B30" style={{ marginVertical: 10 }} />
+                ) : (
+                  <SelectInput
+                    label="Select Machine"
+                    data={machines}
+                    selectedValue={selectedMachine}
+                    onSelect={setSelectedMachine}
+                    keyExtractor={(item) => item.id}
+                    labelExtractor={(item) => item.name}
+                    emptyMessage={
+                      trainingLocation
+                        ? 'No machines available for this location'
+                        : 'Select where you are training to load machines'
+                    }
+                  />
+                )}
 
                 {/* Select Movement */}
                 <SelectInput
@@ -924,6 +1098,47 @@ const styles = StyleSheet.create({
   cancelButtonText: { fontWeight: '900', fontSize: 18, color: '#999' },
 
   buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+
+  // Localisation (home / branch)
+  locationButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 8,
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#2A2A2A',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    gap: 8,
+  },
+  locationButtonActive: {
+    backgroundColor: '#FF3B30',
+    borderColor: '#FF3B30',
+    shadowColor: '#FF3B30',
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
+  },
+  locationButtonText: {
+    color: '#E5E7EB',
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  locationButtonTextActive: {
+    color: '#121212',
+  },
+  helperText: {
+    color: '#9CA3AF',
+    fontSize: 13,
+    marginTop: 4,
+  },
 
   // --- UPDATED SELECT INPUT STYLE (machines, movements, charges) ---
   selectContainerScroll: {

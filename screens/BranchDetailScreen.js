@@ -45,9 +45,15 @@ const BranchDetailScreen = ({ route, navigation }) => {
     try {
       setLoadingCoaches(true);
       const data = await branchAPI.getCoaches(branch.id);
-      setCoaches(data);
+      const list =
+        (Array.isArray(data?.data?.data) && data?.data?.data) ||
+        (Array.isArray(data?.data) && data?.data) ||
+        (Array.isArray(data) && data) ||
+        [];
+      setCoaches(list);
     } catch (err) {
       console.error('Failed to load coaches', err);
+      setCoaches([]);
     } finally {
       setLoadingCoaches(false);
     }
