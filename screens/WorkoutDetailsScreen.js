@@ -20,7 +20,7 @@ const getAchievementNote = (value) => {
   return 'Not started';
 };
 
-const WorkoutDetailsScreen = ({ route }) => {
+const WorkoutDetailsScreen = ({ route, navigation }) => {
   const { workout: initialWorkout, workoutId } = route.params || {};
   const [workout, setWorkout] = useState(initialWorkout || null);
   const [orderEdits, setOrderEdits] = useState({});

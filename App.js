@@ -19,6 +19,7 @@ import BranchMapScreen from './screens/BranchMapScreen';
 import NotificationsScreen from './screens/NotificationsScreen';
 import ProgrammesScreen from './screens/ProgrammesScreen';
 import ProgrammeDetailScreen from './screens/ProgrammeDetailScreen';
+import ProfileScreen from './screens/ProfileScreen';
 
 const Stack = createStackNavigator();
 
@@ -45,6 +46,11 @@ export default function App() {
           name="Notifications"
           component={NotificationsScreen}
           options={{ title: 'Notifications' }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{ title: 'Profile' }}
         />
         
 <Stack.Screen

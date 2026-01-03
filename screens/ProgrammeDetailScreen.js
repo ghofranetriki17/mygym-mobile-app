@@ -171,18 +171,14 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
       return;
     }
 
-    // Merge with existing
+    // Merge with existing, preserving duplicates
     const existing =
       (programme.workouts || []).map((w, idx) => ({
         id: w.id,
         order: w.pivot?.order ?? idx + 1,
         week_day: w.pivot?.week_day ?? null,
       })) || [];
-
-    const mergedMap = new Map();
-    existing.forEach((w) => mergedMap.set(String(w.id), w));
-    selections.forEach((w) => mergedMap.set(String(w.id), w));
-    const merged = Array.from(mergedMap.values());
+    const merged = [...existing, ...selections];
 
     setSavingAdd(true);
     try {
@@ -206,8 +202,13 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
         text: 'Remove',
         style: 'destructive',
         onPress: async () => {
+          const current = [...(programme.workouts || [])];
+          const removeIndex = current.findIndex((w) => w.id === workoutId);
+          if (removeIndex === -1) return;
+          current.splice(removeIndex, 1); // remove only one occurrence
+
           const remaining =
-            (programme.workouts || []).filter((w) => w.id !== workoutId).map((w, idx) => ({
+            current.map((w, idx) => ({
               id: w.id,
               order: w.pivot?.order ?? idx + 1,
               week_day: w.pivot?.week_day ?? null,
@@ -267,17 +268,22 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
               <Text style={styles.orderText}>Week {item.pivot.order}</Text>
             </View>
           )}
-          <TouchableOpacity
-            style={styles.removeChip}
-            onPress={() => handleRemoveWorkout(item.id)}
-            disabled={removingThis}
-          >
-            <Text style={styles.removeChipText}>{removingThis ? '...' : 'Remove'}</Text>
-          </TouchableOpacity>
         </View>
         <Text style={styles.workoutMeta}>
           {item.exercises ? `${item.exercises.length} exercises` : 'Exercises not loaded'}
         </Text>
+        <TouchableOpacity
+          style={styles.removeRow}
+          onPress={() => handleRemoveWorkout(item.id)}
+          disabled={removingThis}
+          activeOpacity={0.8}
+        >
+          {removingThis ? (
+            <ActivityIndicator color="#FF6B6B" />
+          ) : (
+            <Text style={styles.removeRowText}>Unattach from this programme</Text>
+          )}
+        </TouchableOpacity>
         {loadingThis ? <ActivityIndicator color="#FF3B30" style={{ marginTop: 6 }} /> : null}
       </TouchableOpacity>
     );
@@ -543,17 +549,17 @@ const styles = StyleSheet.create({
   workoutTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
   orderPill: { backgroundColor: '#FF3B30', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
   orderText: { color: '#121212', fontWeight: '800', fontSize: 12 },
-  removeChip: {
-    marginLeft: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  workoutMeta: { color: '#9CA3AF', fontSize: 13, marginTop: 4 },
+  removeRow: {
+    marginTop: 8,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
     backgroundColor: '#2A2A2A',
-    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#333',
   },
-  removeChipText: { color: '#FF6B6B', fontWeight: '800', fontSize: 12 },
-  workoutMeta: { color: '#9CA3AF', fontSize: 13, marginTop: 4 },
+  removeRowText: { color: '#FF6B6B', fontWeight: '800', fontSize: 13 },
   emptyText: { color: '#9CA3AF', fontStyle: 'italic', marginTop: 8 },
   emptyDayText: { color: '#777', fontSize: 12, fontStyle: 'italic' },
   weekContainer: {

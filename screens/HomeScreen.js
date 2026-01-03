@@ -235,6 +235,22 @@ const HomeScreen = ({ navigation }) => {
       .slice(0, 3);
   }, [bookedSessions]);
 
+  const bookingsGrouped = useMemo(() => {
+    const now = new Date();
+    const upcoming = (bookedSessions || [])
+      .filter((s) => s.session_date && new Date(s.session_date) >= now)
+      .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
+    const past = (bookedSessions || [])
+      .filter((s) => s.session_date && new Date(s.session_date) < now)
+      .sort((a, b) => new Date(b.session_date) - new Date(a.session_date));
+    return { upcoming, past };
+  }, [bookedSessions]);
+
+  const initials = useMemo(() => {
+    const parts = (userName || '').split(' ').filter(Boolean);
+    return parts.slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || 'U';
+  }, [userName]);
+
   const cities = useMemo(() => {
     const unique = Array.from(new Set(branches.map((b) => (b.city || '').toLowerCase()).filter(Boolean)));
     return ['all', ...unique];
@@ -271,10 +287,19 @@ const HomeScreen = ({ navigation }) => {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greetingText}>Welcome back,</Text>
-            <Text style={styles.headerTitle}>{userName || 'Athlete'}</Text>
-          </View>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.headerUser}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <View style={styles.userAvatar}>
+              <Text style={styles.userAvatarText}>{initials}</Text>
+            </View>
+            <View>
+              <Text style={styles.greetingText}>Welcome back,</Text>
+              <Text style={styles.headerTitle}>{userName || 'Athlete'}</Text>
+            </View>
+          </TouchableOpacity>
           <View style={styles.headerActions}>
             <TouchableOpacity 
               style={styles.iconButton}
@@ -325,8 +350,8 @@ const HomeScreen = ({ navigation }) => {
             <MaterialCommunityIcons name="calendar-check" size={22} color="#FF5C39" />
             <View>
               <Text style={styles.quickActionTextSecondary}>My Bookings</Text>
-              {bookedSessions.length > 0 && (
-                <Text style={styles.quickActionSubtext}>{bookedSessions.length} active</Text>
+              {bookingsGrouped.upcoming.length > 0 && (
+                <Text style={styles.quickActionSubtext}>{bookingsGrouped.upcoming.length} active</Text>
               )}
             </View>
           </TouchableOpacity>
@@ -542,13 +567,29 @@ const HomeScreen = ({ navigation }) => {
 
           {loadingBookings ? (
             <ActivityIndicator size="large" color="#FF5C39" style={styles.modalLoader} />
-          ) : bookedSessions.length > 0 ? (
-            <FlatList
-              data={bookedSessions}
-              renderItem={renderBookingItem}
-              keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={styles.bookingsList}
-            />
+          ) : bookingsGrouped.upcoming.length > 0 || bookingsGrouped.past.length > 0 ? (
+            <ScrollView contentContainerStyle={styles.bookingsList}>
+              {bookingsGrouped.upcoming.length > 0 && (
+                <>
+                  <Text style={styles.modalSectionTitle}>Upcoming</Text>
+                  {bookingsGrouped.upcoming.map((item) => (
+                    <View key={`up-${item.id || item.session_date}`}>
+                      {renderBookingItem({ item })}
+                    </View>
+                  ))}
+                </>
+              )}
+              {bookingsGrouped.past.length > 0 && (
+                <>
+                  <Text style={styles.modalSectionTitle}>Past</Text>
+                  {bookingsGrouped.past.map((item) => (
+                    <View key={`past-${item.id || item.session_date}`}>
+                      {renderBookingItem({ item })}
+                    </View>
+                  ))}
+                </>
+              )}
+            </ScrollView>
           ) : (
             <View style={styles.modalEmptyState}>
               <MaterialCommunityIcons name="calendar-remove" size={64} color="#374151" />
@@ -631,6 +672,18 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
   },
+  headerUser: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  userAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#1F1F1F',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userAvatarText: { color: '#FF5C39', fontWeight: '900', fontSize: 16 },
   greetingText: {
     fontSize: 14,
     color: '#9CA3AF',
@@ -1111,6 +1164,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 40,
+  },
+  modalSectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 10,
   },
   bookingCard: {
     backgroundColor: '#1F1F1F',
