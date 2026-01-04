@@ -149,7 +149,7 @@ const AuthScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Fitness App</Text>
+      <Text style={styles.title}>Anas Plus</Text>
       
       <View style={styles.toggleContainer}>
         <TouchableOpacity 
@@ -220,6 +220,8 @@ const AuthScreen = ({ navigation }) => {
           {loading ? 'Loading...' : (isLogin ? 'Login' : 'Register')}
         </Text>
       </TouchableOpacity>
+
+      <Text style={styles.footerNote}>by Triki Ghofrane · 2025</Text>
     </View>
   );
 };
@@ -312,6 +314,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     letterSpacing: 1,
+  },
+  footerNote: {
+    marginTop: 40,
+    textAlign: 'center',
+    color: '#6B7280',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    opacity: 0.8,
   },
 });
 

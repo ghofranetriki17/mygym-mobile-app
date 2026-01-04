@@ -36,6 +36,7 @@ const HomeScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [bookedSessions, setBookedSessions] = useState([]);
   const [showBookingsModal, setShowBookingsModal] = useState(false);
+  const [showUpcomingOnly, setShowUpcomingOnly] = useState(false);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [parameters, setParameters] = useState({});
@@ -150,6 +151,21 @@ const HomeScreen = ({ navigation }) => {
     if (url) Linking.openURL(url).catch((err) => console.error('Failed to open URL:', err));
   };
 
+  const timeUntil = (dateString) => {
+    if (!dateString) return null;
+    const target = new Date(dateString);
+    const now = new Date();
+    const diffMs = target - now;
+    if (diffMs <= 0) return 'Ended';
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const mins = totalMinutes % 60;
+    if (days > 0) return `In ${days}d ${hours}h`;
+    if (hours > 0) return `In ${hours}h ${mins}m`;
+    return `In ${mins}m`;
+  };
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
@@ -172,6 +188,13 @@ const HomeScreen = ({ navigation }) => {
       .filter((s) => s.session_date && new Date(s.session_date) >= new Date())
       .sort((a, b) => new Date(a.session_date) - new Date(b.session_date))
       .slice(0, 3);
+  }, [bookedSessions]);
+
+  const upcomingCount = useMemo(() => {
+    const now = new Date();
+    return (bookedSessions || []).filter(
+      (s) => s.session_date && new Date(s.session_date) >= now
+    ).length;
   }, [bookedSessions]);
 
   const bookingsGrouped = useMemo(() => {
@@ -255,6 +278,7 @@ const HomeScreen = ({ navigation }) => {
     const isUpcoming = item.session_date && new Date(item.session_date) >= new Date();
     const statusLabel = isUpcoming ? 'Upcoming' : 'Past';
     const statusColor = isUpcoming ? '#34C759' : '#9CA3AF';
+    const countdown = isUpcoming ? timeUntil(item.session_date) : 'Ended';
 
     return (
       <TouchableOpacity
@@ -288,6 +312,7 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.bookingDetails}>
             <Text style={styles.bookingTitle}>{item.title}</Text>
             <Text style={styles.bookingTime}>{formatDate(item.session_date)}</Text>
+            {countdown ? <Text style={styles.bookingCountdown}>{countdown}</Text> : null}
           </View>
           <MaterialIcons name="chevron-right" size={22} color="#8E8E93" />
         </View>
@@ -346,11 +371,17 @@ const HomeScreen = ({ navigation }) => {
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.notificationButton} onPress={() => navigation.navigate('Notifications')}>
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={() => {
+                  setShowUpcomingOnly(true);
+                  setShowBookingsModal(true);
+                }}
+              >
                 <Ionicons name="notifications-outline" size={24} color="white" />
-                {bookingsGrouped.upcoming.length > 0 ? (
+                {upcomingCount > 0 ? (
                   <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{bookingsGrouped.upcoming.length}</Text>
+                    <Text style={styles.badgeText}>{upcomingCount}</Text>
                   </View>
                 ) : null}
               </TouchableOpacity>
@@ -430,8 +461,8 @@ const HomeScreen = ({ navigation }) => {
               <MaterialCommunityIcons name="calendar-check" size={24} color="#FF3B30" />
               <View style={styles.bookingsInfo}>
                 <Text style={styles.quickActionText}>Bookings</Text>
-                {bookingsGrouped.upcoming.length > 0 && (
-                  <Text style={styles.bookingsCount}>{bookingsGrouped.upcoming.length} active</Text>
+                {upcomingCount > 0 && (
+                  <Text style={styles.bookingsCount}>{upcomingCount} active</Text>
                 )}
               </View>
             </TouchableOpacity>
@@ -554,7 +585,10 @@ const HomeScreen = ({ navigation }) => {
         visible={showBookingsModal}
         animationType="slide"
         presentationStyle="formSheet"
-        onRequestClose={() => setShowBookingsModal(false)}
+        onRequestClose={() => {
+          setShowBookingsModal(false);
+          setShowUpcomingOnly(false);
+        }}
       >
         <View style={styles.modalContainer}>
           <LinearGradient colors={['#000000', '#1A1A1A']} style={styles.modalBackground} />
@@ -573,14 +607,20 @@ const HomeScreen = ({ navigation }) => {
                 </View>
               </View>
             </View>
-            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowBookingsModal(false)}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => {
+                setShowBookingsModal(false);
+                setShowUpcomingOnly(false);
+              }}
+            >
               <Ionicons name="close" size={28} color="white" />
             </TouchableOpacity>
           </View>
 
           {loadingBookings ? (
             <ActivityIndicator size="large" color="#FF3B30" style={styles.modalLoader} />
-          ) : bookingsGrouped.upcoming.length > 0 || bookingsGrouped.past.length > 0 ? (
+          ) : bookingsGrouped.upcoming.length > 0 || (!showUpcomingOnly && bookingsGrouped.past.length > 0) ? (
             <ScrollView style={styles.modalContent}>
               {bookingsGrouped.upcoming.length > 0 && (
                 <View style={styles.modalSection}>
@@ -591,7 +631,7 @@ const HomeScreen = ({ navigation }) => {
                 </View>
               )}
 
-              {bookingsGrouped.past.length > 0 && (
+              {!showUpcomingOnly && bookingsGrouped.past.length > 0 && (
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>Past Sessions</Text>
                   {bookingsGrouped.past.map((item) => (
@@ -1188,6 +1228,12 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     fontSize: 12,
     fontFamily: 'System',
+  },
+  bookingCountdown: {
+    color: '#FF9500',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
   },
   bookingStatusPill: {
     flexDirection: 'row',
