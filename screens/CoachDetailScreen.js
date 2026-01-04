@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,26 +12,25 @@ import {
   Linking,
   Alert,
 } from 'react-native';
-import { Video } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 const DEFAULT_POSTER = 'https://via.placeholder.com/400x600/1A1A1A/FFFFFF?text=Video';
 const DAY_LABEL_WIDTH = 62;
 const HOUR_BLOCK_WIDTH = 64;
+const BACKEND_BASE = 'http://172.20.10.2:8000';
+
+const normalizeUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://127.0.0.1:8000')) return url.replace('http://127.0.0.1:8000', BACKEND_BASE);
+  if (url.startsWith('http://localhost:8000')) return url.replace('http://localhost:8000', BACKEND_BASE);
+  if (url.startsWith('/')) return `${BACKEND_BASE}${url}`;
+  return url;
+};
 
 const CoachDetailScreen = ({ route }) => {
   const { coach } = route.params;
   const [activeVideoIndex, setActiveVideoIndex] = useState(null);
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 });
-  const onViewableItemsChanged = useRef(({ viewableItems }) => {
-    if (viewableItems?.length) {
-      const currentIndex = viewableItems[0].index ?? 0;
-      setActiveVideoIndex(currentIndex);
-    } else {
-      setActiveVideoIndex(null);
-    }
-  }).current;
 
   const parseTimeToMinutes = (timeStr) => {
     if (!timeStr || typeof timeStr !== 'string') return null;
@@ -118,132 +117,55 @@ const CoachDetailScreen = ({ route }) => {
     });
   };
 
+  const handleVideoError = (videoUrl, error) => {
+    console.warn('Video playback error', error);
+    Alert.alert(
+      'Lecture impossible',
+      'Ouverture dans le navigateur ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Ouvrir', onPress: () => handleExternalVideoPress(videoUrl) },
+      ]
+    );
+  };
+
   const renderVideoItem = ({ item, index }) => {
-    const sourceType = getVideoSourceType(item.video_url);
+    const videoUrl = normalizeUrl(item.video_url);
+    const sourceType = getVideoSourceType(videoUrl);
     const platformIcon = getPlatformIcon(sourceType);
-    const thumbnailUrl = getVideoThumbnail(item.video_url, sourceType);
-    const posterUrl = item.poster_url || item.thumbnail_url || thumbnailUrl || DEFAULT_POSTER;
-    const isPlaying = activeVideoIndex === index;
-    const isPlayableInline = sourceType === 'local' || sourceType === 'direct' ||
-      sourceType === 'googledrive' || sourceType === 'dropbox' || sourceType === 'onedrive';
-
-    if (isPlayableInline) {
-      return (
-        <View style={styles.reelCard}>
-          <View style={styles.videoContainer}>
-            {isPlaying ? (
-              <Video
-                source={{ uri: item.video_url }}
-                style={styles.reelVideo}
-                useNativeControls
-                resizeMode="cover"
-                isLooping
-                shouldPlay
-                posterSource={{ uri: posterUrl }}
-                posterStyle={styles.reelVideo}
-                usePoster
-              />
-            ) : (
-              <ImageBackground
-                source={{ uri: posterUrl }}
-                style={styles.posterFrame}
-                imageStyle={styles.posterImage}
-              >
-                <View style={styles.posterTint} />
-              </ImageBackground>
-            )}
-
-            <TouchableOpacity
-              style={styles.videoTapArea}
-              onPress={() => {
-                if (isPlaying) {
-                  setActiveVideoIndex(null);
-                } else {
-                  setActiveVideoIndex(index);
-                }
-              }}
-              activeOpacity={1}
-            >
-              <View style={[styles.playOverlay, isPlaying && styles.playOverlayActive]}>
-                {!isPlaying && (
-                  <>
-                    <View style={[styles.playButton, { backgroundColor: platformIcon.color }]}>
-                      <Ionicons name="play" size={40} color="#fff" />
-                    </View>
-                    <Text style={styles.tapToPlayText}>Appuyez pour lire</Text>
-                  </>
-                )}
-              </View>
-            </TouchableOpacity>
-
-            <View style={styles.platformLabel}>
-              <Ionicons name={platformIcon.name} size={16} color={platformIcon.color} />
-              <Text style={styles.platformLabelText}>
-                {sourceType === 'local' ? 'Local' :
-                 sourceType === 'googledrive' ? 'Drive' :
-                 sourceType === 'dropbox' ? 'Dropbox' :
-                 sourceType === 'onedrive' ? 'OneDrive' : 'Video'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.videoInfo}>
-            <Text style={styles.reelTitle} numberOfLines={1}>{item.title}</Text>
-            {item.description && (
-              <Text style={styles.reelDesc} numberOfLines={2}>{item.description}</Text>
-            )}
-          </View>
-        </View>
-      );
-    }
+    const isDirect = sourceType === 'local' || sourceType === 'direct';
 
     return (
-      <View style={styles.reelCard}>
-        <TouchableOpacity
-          style={styles.videoContainer}
-          onPress={() => handleExternalVideoPress(item.video_url)}
-          activeOpacity={0.9}
-        >
-          <ImageBackground
-            source={{ uri: posterUrl }}
-            style={styles.posterFrame}
-            imageStyle={styles.posterImage}
-          >
-            <View style={styles.posterTint} />
-          </ImageBackground>
-
-          <View style={styles.playOverlay}>
-            <View style={[
-              styles.playButton,
-              { backgroundColor: platformIcon.color, shadowColor: platformIcon.color }
-            ]}>
-              <Ionicons name="play" size={40} color="#fff" />
-            </View>
-            <Text style={styles.tapToPlayText}>Ouvrir dans {
-              sourceType === 'youtube' ? 'YouTube' :
-              sourceType === 'tiktok' ? 'TikTok' :
-              sourceType === 'instagram' ? 'Instagram' :
-              sourceType === 'facebook' ? 'Facebook' : 'le navigateur'
-            }</Text>
+      <View style={styles.listItem}>
+        <View style={styles.listText}>
+          <View style={styles.listTitleRow}>
+            <Ionicons name={platformIcon.name} size={16} color={platformIcon.color} style={{ marginRight: 6 }} />
+            <Text style={styles.listTitle} numberOfLines={1}>{item.title || 'Video'}</Text>
           </View>
-
-          <View style={styles.platformLabel}>
-            <Ionicons name={platformIcon.name} size={16} color={platformIcon.color} />
-            <Text style={styles.platformLabelText}>
-              {sourceType === 'youtube' ? 'YouTube' :
-               sourceType === 'tiktok' ? 'TikTok' :
-               sourceType === 'instagram' ? 'Instagram' :
-               sourceType === 'facebook' ? 'Facebook' : 'Web'}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        <View style={styles.videoInfo}>
-          <Text style={styles.reelTitle} numberOfLines={1}>{item.title}</Text>
-          {item.description && (
-            <Text style={styles.reelDesc} numberOfLines={2}>{item.description}</Text>
+          {item.description ? (
+            <Text style={styles.listDesc} numberOfLines={2}>{item.description}</Text>
+          ) : (
+            <Text style={styles.listDesc} numberOfLines={1}>{videoUrl}</Text>
           )}
+          <Text style={styles.listMeta}>
+            {sourceType === 'youtube' ? 'YouTube' :
+             sourceType === 'tiktok' ? 'TikTok' :
+             sourceType === 'instagram' ? 'Instagram' :
+             sourceType === 'facebook' ? 'Facebook' :
+             sourceType === 'googledrive' ? 'Drive' :
+             sourceType === 'dropbox' ? 'Dropbox' :
+             sourceType === 'onedrive' ? 'OneDrive' :
+             isDirect ? 'Fichier direct' : 'Lien web'}
+          </Text>
         </View>
+        <TouchableOpacity
+          style={styles.listButton}
+          onPress={() => handleExternalVideoPress(videoUrl)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="play" size={16} color="#fff" />
+          <Text style={styles.listButtonText}>Ouvrir</Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -421,21 +343,14 @@ const CoachDetailScreen = ({ route }) => {
             data={allVideos}
             keyExtractor={(item, index) => (item.id ? item.id.toString() : index.toString())}
             renderItem={renderVideoItem}
-            horizontal
-            pagingEnabled
-            snapToInterval={width * 0.88}
-            snapToAlignment="center"
-            decelerationRate="fast"
-            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.reelListContent}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig.current}
           />
-        ) : (
-          <View style={styles.noVideosContainer}>
-            <Ionicons name="videocam-off" size={48} color="#666" />
-            <Text style={styles.noVideosText}>Aucune video disponible</Text>
-          </View>
+    ) : (
+      <View style={styles.noVideosContainer}>
+        <Ionicons name="videocam-off" size={48} color="#666" />
+        <Text style={styles.noVideosText}>Aucune video disponible</Text>
+      </View>
         )}
       </View>
     </ScrollView>
@@ -544,109 +459,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   
-  reelCard: { 
-    backgroundColor: '#1A1A1A', 
-    borderRadius: 20, 
-    marginBottom: 20,
-    width: width * 0.85,
-    marginRight: 16,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    overflow: 'hidden',
-  },
-  videoContainer: {
-    position: 'relative',
-    width: '100%',
-    height: width * 1.3,
-    backgroundColor: '#000',
-  },
-  reelVideo: { 
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#000',
-  },
-  videoTapArea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  playOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.32)',
-  },
-  playOverlayActive: {
-    backgroundColor: 'transparent',
-  },
-  playButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  tapToPlayText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-    marginTop: 16,
-    textShadowColor: 'rgba(0,0,0,0.9)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  platformLabel: {
-    position: 'absolute',
-    top: 15,
-    right: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  platformLabelText: {
-    color: '#fff',
-    fontSize: 12,
-    marginLeft: 5,
-    fontWeight: '700',
-  },
-  videoInfo: {
-    padding: 16,
-  },
-  reelTitle: { 
-    color: '#FFFFFF', 
-    fontSize: 17, 
-    fontWeight: '700', 
-    marginBottom: 6,
-  },
-  reelDesc: { 
-    color: '#999', 
-    fontSize: 14, 
-    lineHeight: 18,
-  },
   reelListContent: {
-    paddingVertical: 10,
-    paddingRight: 16,
+    paddingVertical: 6,
+    paddingRight: 0,
   },
   noVideosContainer: {
     alignItems: 'center',
@@ -659,18 +474,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 10,
   },
-  posterFrame: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#0f0f0f',
+  listItem: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
-  posterImage: {
-    width: '100%',
-    height: '100%',
+  listText: { flex: 1, paddingRight: 10 },
+  listTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  listTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  listDesc: { color: '#aaa', fontSize: 13 },
+  listMeta: { color: '#777', fontSize: 12, marginTop: 4 },
+  listButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
-  posterTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.25)',
+  listButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: 6,
   },
 });
 

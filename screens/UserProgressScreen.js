@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
   ActivityIndicator,
-  Button,
   TextInput,
   Alert,
   KeyboardAvoidingView,
@@ -18,6 +17,7 @@ import { LineChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -35,6 +35,8 @@ const UserProgressScreen = () => {
   const [muscleMass, setMuscleMass] = useState('');
   const [recordedAt, setRecordedAt] = useState('');
   const [userName, setUserName] = useState('');
+
+  const latest = useMemo(() => (progresses.length ? progresses[progresses.length - 1] : null), [progresses]);
 
   useEffect(() => {
     loadUserData();
@@ -224,38 +226,72 @@ const UserProgressScreen = () => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007bff" />
+        <ActivityIndicator size="large" color="#FF3B30" />
         <Text style={styles.loadingText}>Loading progress...</Text>
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-    >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{userName}'s Progress</Text>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={['#FF3B30', '#0B0B0F']} style={styles.heroCard}>
+          <Text style={styles.heroKicker}>Progress Tracker</Text>
+          <Text style={styles.heroTitle}>{userName}'s progress</Text>
+          <Text style={styles.heroSubtitle}>Suivez poids, masse musculaire et body fat</Text>
+          <View style={styles.heroBadges}>
+            <View style={styles.heroBadge}>
+              <Icon name="calendar" size={14} color="#0B0B0F" />
+              <Text style={styles.heroBadgeText}>
+                {progresses.length ? `${progresses.length} entr${progresses.length > 1 ? 'ies' : 'y'}` : 'No entries'}
+              </Text>
+            </View>
+            <View style={[styles.heroBadge, { backgroundColor: 'rgba(11,11,15,0.2)', borderColor: '#0B0B0F' }]}>
+              <Icon name="clock-o" size={14} color="#0B0B0F" />
+              <Text style={[styles.heroBadgeText, { color: '#0B0B0F' }]}>
+                {latest ? new Date(latest.recorded_at).toLocaleDateString() : 'No recent data'}
+              </Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.cardsRow}>
+          <View style={styles.statCard}>
+            <Icon name="balance-scale" size={20} color="#FF3B30" />
+            <Text style={styles.statLabelSmall}>Weight</Text>
+            <Text style={styles.statValue}>{latest?.weight ? `${latest.weight} kg` : '--'}</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Icon name="heartbeat" size={20} color="#FF3B30" />
+            <Text style={styles.statLabelSmall}>Body fat</Text>
+            <Text style={styles.statValue}>{latest?.body_fat ? `${latest.body_fat}%` : '--'}</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Icon name="line-chart" size={20} color="#FF3B30" />
+            <Text style={styles.statLabelSmall}>BMI</Text>
+            <Text style={styles.statValue}>{latest ? formatImc(latest.imc) : '--'}</Text>
+          </View>
+        </View>
 
         {chartData && (
-          <>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Tendances récentes</Text>
             <LineChart
               data={chartData}
-              width={screenWidth - 30}
+              width={screenWidth * 0.9}
               height={220}
               chartConfig={{
-                backgroundColor: "#e26a00",
-                backgroundGradientFrom: "#fb8c00",
-                backgroundGradientTo: "#ffa726",
+                backgroundColor: '#0F1016',
+                backgroundGradientFrom: '#0F1016',
+                backgroundGradientTo: '#0F1016',
                 decimalPlaces: 1,
-                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                color: (opacity = 1) => `rgba(255, 59, 48, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                 style: { borderRadius: 16 },
                 propsForDots: {
-                  r: "6",
+                  r: "5",
                   strokeWidth: "2",
-                  stroke: "#ffa726"
+                  stroke: "#FF3B30"
                 }
               }}
               style={{ marginVertical: 8, borderRadius: 16 }}
@@ -264,22 +300,22 @@ const UserProgressScreen = () => {
             <View style={styles.legendContainer}>
               <Text style={[styles.legendText, { color: 'rgba(0, 123, 255, 1)' }]}>Weight</Text>
               <Text style={[styles.legendText, { color: 'rgba(255, 99, 132, 1)' }]}>Height</Text>
-              <Text style={[styles.legendText, { color: 'rgba(75, 192, 192, 1)' }]}>Muscle Mass</Text>
-              <Text style={[styles.legendText, { color: 'rgba(255, 206, 86, 1)' }]}>Body Fat</Text>
+              <Text style={[styles.legendText, { color: 'rgba(75, 192, 192, 1)' }]}>Muscle</Text>
+              <Text style={[styles.legendText, { color: 'rgba(255, 206, 86, 1)' }]}>Body fat</Text>
             </View>
-          </>
+          </View>
         )}
 
-
-        <View style={styles.form}>
-          <Text style={styles.formTitle}>Add New Progress</Text>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Add new progress</Text>
+          <Text style={styles.sectionHint}>Enregistrez vos mesures pour suivre vos progrès.</Text>
           <TextInput
             placeholder="Weight (kg) - optional"
             keyboardType="numeric"
             value={weight}
             onChangeText={setWeight}
             style={styles.input}
-            placeholderTextColor="#9a9a9aff"
+            placeholderTextColor="#8E8E93"
           />
           <TextInput
             placeholder="Height (cm) - optional"
@@ -287,7 +323,7 @@ const UserProgressScreen = () => {
             value={height}
             onChangeText={setHeight}
             style={styles.input}
-            placeholderTextColor="#9a9a9aff"
+            placeholderTextColor="#8E8E93"
           />
           <TextInput
             placeholder="Body Fat % - optional"
@@ -295,7 +331,7 @@ const UserProgressScreen = () => {
             value={bodyFat}
             onChangeText={setBodyFat}
             style={styles.input}
-            placeholderTextColor="#9a9a9aff"
+            placeholderTextColor="#8E8E93"
           />
           <TextInput
             placeholder="Muscle Mass % - optional"
@@ -303,208 +339,298 @@ const UserProgressScreen = () => {
             value={muscleMass}
             onChangeText={setMuscleMass}
             style={styles.input}
-            placeholderTextColor="#9a9a9aff"
+            placeholderTextColor="#8E8E93"
           />
-          <View style={styles.dateInputContainer}>
+          <View style={styles.dateRow}>
             <TextInput
               placeholder="Recorded Date (YYYY-MM-DD) - required"
               value={recordedAt}
               onChangeText={setRecordedAt}
-              style={[styles.input, { flex: 1 }]}
-              placeholderTextColor="#9a9a9aff"
+              style={[styles.input, { flex: 1, marginBottom: 0 }]}
+              placeholderTextColor="#8E8E93"
             />
-            <Button title="Today" onPress={setTodaysDate} />
+            <TouchableOpacity style={styles.secondaryButton} onPress={setTodaysDate}>
+              <Text style={styles.secondaryButtonText}>Today</Text>
+            </TouchableOpacity>
           </View>
-          <Button title="Add Progress" onPress={addProgress} />
+          <TouchableOpacity style={styles.primaryButton} onPress={addProgress}>
+            <Text style={styles.primaryButtonText}>Save progress</Text>
+          </TouchableOpacity>
         </View>
-        <FlatList
-          data={progresses}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.progressItem}>
-              <Text style={styles.dateText}>{new Date(item.recorded_at).toLocaleDateString()}</Text>
-              <View style={styles.metricsContainer}>
-                
-                <View style={styles.metricBox}>
-                  <Icon name="balance-scale" size={24} color="#FF6F61" />
-                  <Text style={styles.metricValue}>{item.weight ? `${item.weight} kg` : '-'}</Text>
-                  <Text style={styles.metricLabel}>Weight</Text>
-                </View>
 
-                <View style={styles.metricBox}>
-                  <Icon name="arrows-v" size={24} color="#FF6F61" />
-                  <Text style={styles.metricValue}>{item.height ? `${item.height} cm` : '-'}</Text>
-                  <Text style={styles.metricLabel}>Height</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 12 }]}>History</Text>
+        {progresses.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No progress data yet. Add your first entry above!</Text>
+          </View>
+        ) : (
+          progresses
+            .slice()
+            .reverse()
+            .map((item) => (
+              <View key={item.id} style={styles.progressItem}>
+                <View style={styles.progressHeader}>
+                  <Text style={styles.dateText}>{new Date(item.recorded_at).toLocaleDateString()}</Text>
+                  <TouchableOpacity onPress={() => deleteProgress(item.id)} style={styles.deleteButton}>
+                    <Icon name="trash" size={14} color="#FF3B30" />
+                    <Text style={styles.deleteButtonText}>Delete</Text>
+                  </TouchableOpacity>
                 </View>
-
-                <View style={styles.metricBox}>
-                  <Icon name="tint" size={24} color="#FF6F61" />
-                  <Text style={styles.metricValue}>{item.body_fat ? `${item.body_fat}%` : '-'}</Text>
-                  <Text style={styles.metricLabel}>Body Fat</Text>
-                </View>
-
-                <View style={styles.metricBox}>
-                  <Icon name="heartbeat" size={24} color="#FF6F61" />
-                  <Text style={styles.metricValue}>{item.muscle_mass ? `${item.muscle_mass}%` : '-'}</Text>
-                  <Text style={styles.metricLabel}>Muscle Mass</Text>
-                </View>
-
-                <View style={styles.metricBox}>
-                  <Icon name="balance-scale" size={24} color="#FFD700" />
-                  <Text style={styles.metricValue}>{formatImc(item.imc)}</Text>
-                  <Text style={styles.metricLabel}>BMI</Text>
+                <View style={styles.metricsContainer}>
+                  <View style={styles.metricBox}>
+                    <Icon name="balance-scale" size={18} color="#FF6F61" />
+                    <Text style={styles.metricValue}>{item.weight ? `${item.weight} kg` : '-'}</Text>
+                    <Text style={styles.metricLabel}>Weight</Text>
+                  </View>
+                  <View style={styles.metricBox}>
+                    <Icon name="arrows-v" size={18} color="#FF6F61" />
+                    <Text style={styles.metricValue}>{item.height ? `${item.height} cm` : '-'}</Text>
+                    <Text style={styles.metricLabel}>Height</Text>
+                  </View>
+                  <View style={styles.metricBox}>
+                    <Icon name="tint" size={18} color="#FF6F61" />
+                    <Text style={styles.metricValue}>{item.body_fat ? `${item.body_fat}%` : '-'}</Text>
+                    <Text style={styles.metricLabel}>Body Fat</Text>
+                  </View>
+                  <View style={styles.metricBox}>
+                    <Icon name="heartbeat" size={18} color="#FF6F61" />
+                    <Text style={styles.metricValue}>{item.muscle_mass ? `${item.muscle_mass}%` : '-'}</Text>
+                    <Text style={styles.metricLabel}>Muscle</Text>
+                  </View>
+                  <View style={styles.metricBox}>
+                    <Icon name="line-chart" size={18} color="#FFD700" />
+                    <Text style={styles.metricValue}>{formatImc(item.imc)}</Text>
+                    <Text style={styles.metricLabel}>BMI</Text>
+                  </View>
                 </View>
               </View>
-              
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => deleteProgress(item.id)}
-              >
-                <Text style={styles.deleteButtonText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          scrollEnabled={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No progress data yet. Add your first entry below!</Text>
-            </View>
-          }
-        />
-
+            ))
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    padding: 15, 
-    backgroundColor: '#121212', 
+  container: {
+    padding: 16,
+    backgroundColor: '#000000',
     flexGrow: 1,
+    gap: 16,
   },
-  center: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  title: { 
-    fontSize: 22, 
-    fontWeight: 'bold', 
-    marginBottom: 15, 
-    color: '#FF3B30', 
-    textShadowColor: '#900000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 4,
-    letterSpacing: 1,
-  },
-  loadingText: { 
-    marginTop: 10, 
-    color: '#FFFFFF', 
-  },
-  progressItem: { 
-    backgroundColor: '#1E1E1E', 
-    padding: 15, 
-    marginBottom: 12,  
-    borderRadius: 12,  
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  dateText: {
-    color: '#FF6F61', 
-    fontSize: 16,    
-    fontWeight: '600', 
-    marginBottom: 15, 
-    textAlign: 'center',
-  },
-  metricsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  metricBox: {
-    width: '30%',
-    backgroundColor: '#2A2A2A',
-    marginBottom: 15,
-    borderRadius: 10,
-    paddingVertical: 15,
+  center: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    shadowOffset: { width: 0,
-    height: 2 },
+    backgroundColor: '#000000',
   },
-  metricValue: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 5,
+  loadingText: {
+    marginTop: 10,
+    color: '#FFFFFF',
   },
-  metricLabel: {
-    color: '#AAA',
+  heroCard: {
+    borderRadius: 18,
+    padding: 18,
+    gap: 10,
+  },
+  heroKicker: {
+    color: '#0B0B0F',
+    fontWeight: '800',
+    letterSpacing: 1,
     fontSize: 12,
-    marginTop: 3,
     textTransform: 'uppercase',
   },
-  deleteButton: {
-    marginTop: 10,
-    backgroundColor: '#FF3B30',
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignItems: 'center',
+  heroTitle: {
+    color: '#0B0B0F',
+    fontSize: 24,
+    fontWeight: '900',
   },
-  deleteButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  form: { 
-    marginTop: 20, 
-    backgroundColor: '#1E1E1E', 
-    padding: 15, 
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#FF3B30',
-  },
-  input: {
-    borderColor: '#333',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 10,
-    borderRadius: 6,
-    color: '#FFFFFFFF',
-    fontSize: 16,
+  heroSubtitle: {
+    color: '#1E1E1E',
+    fontSize: 14,
     fontWeight: '600',
   },
-  dateInputContainer: {
+  heroBadges: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  heroBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FFE0DB',
+    borderRadius: 12,
+  },
+  heroBadgeText: {
+    color: '#0B0B0F',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  cardsRow: {
+    flexDirection: 'row',
     gap: 10,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#0F1016',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#1F1F2A',
+    gap: 4,
+  },
+  statLabelSmall: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  statValue: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  card: {
+    backgroundColor: '#0F1016',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#1F1F2A',
+    gap: 10,
+  },
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  sectionHint: {
+    color: '#9CA3AF',
+    fontSize: 13,
   },
   legendContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 10,
+    marginBottom: 4,
   },
   legendText: {
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 12,
     color: '#FFFFFF',
+  },
+  input: {
+    borderColor: '#1F1F2A',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+    borderRadius: 10,
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    backgroundColor: '#151621',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  primaryButton: {
+    backgroundColor: '#FF3B30',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  primaryButtonText: {
+    color: '#0B0B0F',
+    fontWeight: '900',
+    fontSize: 16,
+  },
+  secondaryButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+    backgroundColor: 'rgba(255,59,48,0.08)',
+  },
+  secondaryButtonText: {
+    color: '#FF3B30',
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  progressItem: {
+    backgroundColor: '#0F1016',
+    padding: 14,
+    marginBottom: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#1F1F2A',
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  dateText: {
+    color: '#FF6F61',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  metricsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  metricBox: {
+    width: '31%',
+    backgroundColor: '#151621',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1F1F2A',
+  },
+  metricValue: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 6,
+  },
+  metricLabel: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,59,48,0.12)',
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+  },
+  deleteButtonText: {
+    color: '#FF3B30',
+    fontWeight: '800',
+    fontSize: 12,
   },
   emptyContainer: {
     padding: 20,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    color: '#FFFFFFa5',
+    fontSize: 15,
+    color: '#FFFFFF',
     textAlign: 'center',
   },
 });

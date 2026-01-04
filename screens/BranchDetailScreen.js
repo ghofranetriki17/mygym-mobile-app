@@ -13,13 +13,17 @@ import {
   Alert,
   Dimensions,
   Modal,
-  Pressable
+  Pressable,
+  ImageBackground,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { branchAPI, groupSessionAPI } from '../services/api';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
+const HERO_FALLBACK =
+  'https://images.unsplash.com/photo-1534367507873-d2d7e24c797f?q=80&w=2070&auto=format&fit=crop';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const shortDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -91,7 +95,7 @@ const BranchDetailScreen = ({ route, navigation }) => {
   };
 
   const formatTime = (time) => {
-    if (!time) return 'Fermé';
+    if (!time) return 'FERME';
     const [hours, minutes] = time.split(':');
     return `${hours}:${minutes}`;
   };
@@ -145,7 +149,7 @@ const BranchDetailScreen = ({ route, navigation }) => {
   const refreshCoaches = async () => {
     Alert.alert(
       "Actualiser les coaches",
-      "Recharger les données des coaches?",
+      "Recharger les donnees des coaches?",
       [
         { text: "Annuler", style: "cancel" },
         { text: "Actualiser", onPress: fetchCoaches }
@@ -180,9 +184,44 @@ const BranchDetailScreen = ({ route, navigation }) => {
   const fallbackLatitude = 34.7745429;
   const fallbackLongitude = 10.7338536;
   const fallbackPlusCode = 'QPFM+RG9, Sfax';
+  const heroImage = branch.image_url || HERO_FALLBACK;
 
   const latitude = branch.latitude || fallbackLatitude;
   const longitude = branch.longitude || fallbackLongitude;
+
+  const todayAvailability = () => {
+    if (!Array.isArray(branch?.availabilities)) return null;
+    return branch.availabilities.find(
+      (a) => a.day_of_week?.toLowerCase() === today.toLowerCase()
+    );
+  };
+
+  const cleanTime = (time) => (time ? time.split(':').slice(0, 2).join(':') : '--:--');
+
+  const openState = () => {
+    const slot = todayAvailability();
+    if (!slot || slot.is_closed) {
+      return {
+        label: 'Closed',
+        color: '#FF6B6B',
+        bg: 'rgba(255,107,107,0.15)',
+        border: 'rgba(255,107,107,0.4)',
+        range: slot ? `${cleanTime(slot.opening_hour)} - ${cleanTime(slot.closing_hour)}` : null,
+      };
+    }
+    const now = new Date();
+    const nowVal = now.getHours() * 100 + now.getMinutes();
+    const openVal = Number(cleanTime(slot.opening_hour).replace(':', ''));
+    const closeVal = Number(cleanTime(slot.closing_hour).replace(':', ''));
+    const isOpen = nowVal >= openVal && nowVal <= closeVal;
+    return {
+      label: isOpen ? 'Open now' : 'Closed now',
+      color: isOpen ? '#00E676' : '#FFB020',
+      bg: isOpen ? 'rgba(0,230,118,0.15)' : 'rgba(255,176,32,0.15)',
+      border: isOpen ? 'rgba(0,230,118,0.4)' : 'rgba(255,176,32,0.4)',
+      range: `${cleanTime(slot.opening_hour)} - ${cleanTime(slot.closing_hour)}`,
+    };
+  };
 
   const openMapApp = () => {
     let url = '';
@@ -207,72 +246,100 @@ const BranchDetailScreen = ({ route, navigation }) => {
     return (
       <TouchableOpacity
         onPress={() => navigation.navigate('CoachDetail', { coach })}
-        style={styles.coachCard}
-        activeOpacity={0.8}
+        style={styles.coachBubble}
+        activeOpacity={0.85}
       >
-        <View style={styles.coachImageContainer}>
-          <Image 
-            source={{ uri: coach.photo_url || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFu5rZflN6Arud7cwsrZ9Uu0cXXXGt7ZWOdw&s' }} 
-            style={[
-              styles.coachImage,
-              !isAvailable && styles.coachImageUnavailable
-            ]} 
-            onError={() => console.log('Failed to load coach image for:', coach.name)}
+        <View style={styles.coachAvatarWrap}>
+          <Image
+            source={{
+              uri:
+                coach.photo_url ||
+                'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFu5rZflN6Arud7cwsrZ9Uu0cXXXGt7ZWOdw&s',
+            }}
+            style={[styles.coachAvatar, !isAvailable && styles.coachImageUnavailable]}
           />
-          {!isAvailable && <View style={styles.darkOverlay} />}
-          
-          <View style={[
-            styles.availabilityDot, 
-            { backgroundColor: isAvailable ? '#00FF88' : '#FF3B30' }
-          ]} />
+          <View
+            style={[
+              styles.coachPresenceDot,
+              { backgroundColor: isAvailable ? '#00E676' : '#FF3B30' },
+            ]}
+          />
         </View>
-        
-        <Text style={[
-          styles.coachName,
-          !isAvailable && styles.coachNameUnavailable
-        ]}>
+        <Text
+          style={[styles.coachNameBubble, !isAvailable && styles.coachNameUnavailable]}
+          numberOfLines={1}
+        >
           {coach.name ? coach.name.split(' ')[0] : 'Coach'}
         </Text>
-        
-        <Text style={[
-          styles.availabilityStatus,
-          { color: isAvailable ? '#00FF88' : '#FF3B30' }
-        ]}>
-          {isAvailable ? 'Disponible' : 'Occupé'}
-        </Text>
+        <View
+          style={[
+            styles.coachStatusChip,
+            { backgroundColor: isAvailable ? 'rgba(0,230,118,0.15)' : 'rgba(255,59,48,0.15)' },
+            { borderColor: isAvailable ? 'rgba(0,230,118,0.4)' : 'rgba(255,59,48,0.4)' },
+          ]}
+        >
+          <Text
+            style={[
+              styles.coachStatusChipText,
+              { color: isAvailable ? '#00E676' : '#FF3B30' },
+            ]}
+          >
+            {isAvailable ? 'Disponible' : 'Hors ligne'}
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   };
-
   const renderSession = ({ item: session }) => {
     const isWomenOnly = session.is_for_women && !session.is_for_kids && !session.is_free;
     const isKidsOnly = session.is_for_kids && !session.is_for_women && !session.is_free;
     const isFree = session.is_free && !session.is_for_women && !session.is_for_kids;
 
+    const startDate = new Date(session.session_date);
+    const dateText = startDate.toLocaleDateString('fr-FR', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+    const timeText = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const chipColor = isWomenOnly ? '#FF69B4' : isKidsOnly ? '#64D2FF' : isFree ? '#00FF88' : '#FFB020';
+    const badgeLabel = isWomenOnly ? 'Femmes' : isKidsOnly ? 'Enfants' : isFree ? 'Gratuit' : 'Standard';
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[
           styles.sessionCard,
+          { borderColor: `${chipColor}44` },
           isWomenOnly && styles.womenOnlyCard,
           isKidsOnly && styles.kidsOnlyCard,
-          isFree && styles.freeOnlyCard
+          isFree && styles.freeOnlyCard,
         ]}
         onPress={() => navigation.navigate('SessionDetail', { session })}
       >
-        <Text style={styles.sessionTitle}>{session.title}</Text>
-        <Text style={styles.sessionInfo}>
-          {new Date(session.session_date).toLocaleString()} • {session.duration} min
-        </Text>
-        <Text style={styles.sessionInfo}>
-          Coach : {session.coach?.name || 'N/A'} • {session.course?.name || 'Sans cours'}
-        </Text>
-        <View style={styles.badgeContainer}>
-          {session.is_for_women && <Text style={[styles.sessionBadge, styles.womenBadge]}>👩 Femmes</Text>}
-          {session.is_for_kids && <Text style={[styles.sessionBadge, styles.kidsBadge]}>🧒 Enfants</Text>}
-          {session.is_free && <Text style={[styles.sessionBadge, styles.freeBadge]}>🎁 Gratuit</Text>}
-          {!session.is_free && !session.is_for_women && !session.is_for_kids && (
-            <Text style={[styles.sessionBadge, styles.paidBadge]}>💰 Payant</Text>
-          )}
+        <View style={styles.sessionHeader}>
+          <View style={styles.sessionTitleWrap}>
+            <Text style={styles.sessionTitle} numberOfLines={1}>
+              {session.title}
+            </Text>
+            <View style={[styles.sessionBadge, { backgroundColor: `${chipColor}22` }]}>
+              <View style={[styles.heroStatusDot, { backgroundColor: chipColor }]} />
+              <Text style={[styles.sessionBadgeText, { color: chipColor }]}>{badgeLabel}</Text>
+            </View>
+          </View>
+          <Text style={styles.sessionMeta}>
+            {dateText} | {timeText} | {session.duration || '--'} min
+          </Text>
+        </View>
+
+        <View style={styles.sessionFooterRow}>
+          <View style={styles.sessionMetaRow}>
+            <Ionicons name="person-outline" size={14} color="#9CA3AF" />
+            <Text style={styles.sessionMetaText}>{session.coach?.name || 'Coach'}</Text>
+          </View>
+          <View style={styles.sessionMetaRow}>
+            <Ionicons name="fitness-outline" size={14} color="#9CA3AF" />
+            <Text style={styles.sessionMetaText}>{session.course?.name || 'Sans cours'}</Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -440,28 +507,46 @@ const BranchDetailScreen = ({ route, navigation }) => {
                 </View>
                 
                 {daySessions.length > 0 ? (
-                  <FlatList
-                    data={daySessions}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity 
+                  <View>
+                    {daySessions.map((item) => (
+                      <TouchableOpacity
+                        key={item.id || item.session_date}
                         style={[
                           styles.sessionChip,
                           item.is_for_women && styles.womenOnlyChip,
                           item.is_for_kids && styles.kidsOnlyChip,
-                          item.is_free && styles.freeOnlyChip
+                          item.is_free && styles.freeOnlyChip,
                         ]}
                         onPress={() => navigation.navigate('SessionDetail', { session: item })}
                       >
-                        <Text style={styles.sessionChipTitle}>{item.title}</Text>
-                        <Text style={styles.sessionChipTime}>
-                          {new Date(item.session_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-                        <Text style={styles.sessionChipCoach}>{item.coach?.name || 'Coach'}</Text>
+                        <View style={styles.sessionChipHeader}>
+                          <Text style={styles.sessionChipTitle} numberOfLines={1}>
+                            {item.title}
+                          </Text>
+                          <View
+                            style={[
+                              styles.sessionChipBadge,
+                              item.is_for_women && { borderColor: '#FF69B4', backgroundColor: 'rgba(255,105,180,0.12)' },
+                              item.is_for_kids && { borderColor: '#64D2FF', backgroundColor: 'rgba(100,210,255,0.12)' },
+                              item.is_free && { borderColor: '#00FF88', backgroundColor: 'rgba(0,255,136,0.12)' },
+                            ]}
+                          >
+                            <Text style={styles.sessionChipBadgeText}>
+                              {item.is_for_women ? 'Femmes' : item.is_for_kids ? 'Enfants' : item.is_free ? 'Gratuit' : 'Standard'}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.sessionChipMetaRow}>
+                          <Ionicons name="time-outline" size={12} color="#FF3B30" />
+                          <Text style={styles.sessionChipTime}>\n                            {new Date(item.session_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} � {item.duration || '--'} min\n                          </Text>
+                        </View>
+                        <View style={styles.sessionChipMetaRow}>
+                          <Ionicons name="person-outline" size={12} color="#9CA3AF" />
+                          <Text style={styles.sessionChipCoach}>{item.coach?.name || 'Coach'}</Text>
+                        </View>
                       </TouchableOpacity>
-                    )}
-                    keyExtractor={item => item.id.toString()}
-                    scrollEnabled={false}
-                  />
+                    ))}
+                  </View>
                 ) : (
                   <View style={styles.emptyDay}>
                     <Ionicons name="fitness-outline" size={24} color="#666" />
@@ -487,39 +572,107 @@ const BranchDetailScreen = ({ route, navigation }) => {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Hero Header */}
       <View style={styles.heroSection}>
-        <View style={styles.headerOverlay}>
-          <Text style={styles.branchName}>{branch.name}</Text>
-          <Text style={styles.branchSubtitle}>Salle de Sport Premium</Text>
-        </View>
+        <ImageBackground source={{ uri: heroImage }} style={styles.heroImage} blurRadius={2}>
+          <LinearGradient
+            colors={['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.9)']}
+            style={styles.heroGradient}
+          />
+          <View style={styles.heroTopBar}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <View style={styles.heroPill}>
+              <Ionicons name="flame" size={16} color="#FF3B30" />
+              <Text style={styles.heroPillText}>Location</Text>
+            </View>
+          </View>
+
+          <View style={styles.heroContent}>
+            <Text style={styles.branchName}>{branch.name}</Text>
+            <Text style={styles.branchSubtitle} numberOfLines={1}>
+              {branch.address || branch.city || 'Move. Lift. Repeat.'}
+            </Text>
+
+            <View style={styles.heroMetaRow}>
+              <View
+                style={[
+                  styles.heroMetaChip,
+                  { backgroundColor: openState().bg, borderColor: openState().border },
+                ]}
+              >
+                <View style={[styles.heroStatusDot, { backgroundColor: openState().color }]} />
+                <Text style={[styles.heroMetaText, { color: openState().color }]}>
+                  {openState().label}
+                </Text>
+                {openState().range ? (
+                  <Text style={[styles.heroMetaSub, { color: openState().color }]}>
+                    {openState().range}
+                  </Text>
+                ) : null}
+              </View>
+
+              {branch.city ? (
+                <View style={styles.heroMetaChip}>
+                  <Ionicons name="location" size={14} color="#FFFFFF" />
+                  <Text style={styles.heroMetaText}>{branch.city}</Text>
+                </View>
+              ) : null}
+
+              {branch.phone ? (
+                <TouchableOpacity
+                  style={styles.heroMetaChip}
+                  onPress={() => Linking.openURL(`tel:${branch.phone}`)}
+                >
+                  <Ionicons name="call" size={14} color="#FFFFFF" />
+                  <Text style={styles.heroMetaText}>{branch.phone}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+        </ImageBackground>
       </View>
 
       {/* Quick Actions */}
       <View style={styles.quickActionsContainer}>
-        <TouchableOpacity 
-          style={styles.quickActionButton} 
+        <TouchableOpacity
+          style={styles.quickActionCard}
           onPress={() => navigation.navigate('MachineList', { branch })}
+          activeOpacity={0.85}
         >
-          <View style={styles.actionIconContainer}>
-            <Ionicons name="barbell" size={24} color="#FF3B30" />
+          <LinearGradient colors={['#1C1C1F', '#101015']} style={styles.quickActionGradient} />
+          <View style={styles.quickActionIcon}>
+            <Ionicons name="barbell" size={22} color="#FF3B30" />
           </View>
-          <Text style={styles.actionText}>Équipements</Text>
+          <View style={styles.quickActionTextWrap}>
+            <Text style={styles.actionTitle}>Equipements</Text>
+            <Text style={styles.actionSubtitle}>Voir les machines</Text>
+          </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.quickActionButton} onPress={openMapApp}>
-          <View style={styles.actionIconContainer}>
-            <Ionicons name="location" size={24} color="#FF3B30" />
+        <TouchableOpacity style={styles.quickActionCard} onPress={openMapApp} activeOpacity={0.85}>
+          <LinearGradient colors={['#FF3B30', '#FF6B3D']} style={styles.quickActionGradient} />
+          <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(0,0,0,0.25)' }]}>
+            <Ionicons name="location" size={22} color="#FFFFFF" />
           </View>
-          <Text style={styles.actionText}>Localisation</Text>
+          <View style={styles.quickActionTextWrap}>
+            <Text style={styles.actionTitle}>Itineraire</Text>
+            <Text style={styles.actionSubtitle}>Ouvrir dans Maps</Text>
+          </View>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.quickActionButton}
+        <TouchableOpacity
+          style={styles.quickActionCard}
           onPress={() => navigation.navigate('SessionBooking', { branch })}
+          activeOpacity={0.85}
         >
-          <View style={styles.actionIconContainer}>
-            <Ionicons name="calendar" size={24} color="#FF3B30" />
+          <LinearGradient colors={['#1C1C1F', '#101015']} style={styles.quickActionGradient} />
+          <View style={styles.quickActionIcon}>
+            <Ionicons name="calendar" size={22} color="#FF3B30" />
           </View>
-          <Text style={styles.actionText}>Réserver</Text>
+          <View style={styles.quickActionTextWrap}>
+            <Text style={styles.actionTitle}>Reserver</Text>
+            <Text style={styles.actionSubtitle}>Sessions de groupe</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -549,18 +702,16 @@ const BranchDetailScreen = ({ route, navigation }) => {
             .sort((a, b) => new Date(a.session_date) - new Date(b.session_date));
 
           return todaySessions.length > 0 ? (
-            <FlatList
-              data={todaySessions}
-              renderItem={renderSession}
-              keyExtractor={(item) => item.id.toString()}
-              scrollEnabled={false}
-              contentContainerStyle={styles.sessionsListContainer}
-            />
+            <View style={styles.sessionsListContainer}>
+              {todaySessions.map((item) => (
+                <View key={item.id || item.session_date}>{renderSession({ item })}</View>
+              ))}
+            </View>
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="time-outline" size={48} color="#666" />
               <Text style={styles.emptyText}>Aucune session aujourd'hui</Text>
-              <Text style={styles.emptySubtext}>Vérifie demain !</Text>
+              <Text style={styles.emptySubtext}>Verifie demain !</Text>
             </View>
           );
         })()}
@@ -610,14 +761,15 @@ const BranchDetailScreen = ({ route, navigation }) => {
             <Text style={styles.emptySubtext}>Revenez plus tard</Text>
           </View>
         ) : (
-          <FlatList
-            data={coaches}
-            renderItem={renderCoach}
-            keyExtractor={(item) => item.id.toString()}
+          <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.coachListContainer}
-          />
+          >
+            {coaches.map((coach) => (
+              <View key={coach.id || coach.name}>{renderCoach({ item: coach })}</View>
+            ))}
+          </ScrollView>
         )}
       </View>
 
@@ -656,7 +808,7 @@ const BranchDetailScreen = ({ route, navigation }) => {
                     isToday && styles.todayTimeHorizontal
                   ]}>
                     {dayData ? (
-                      isClosed ? 'FERMÉ' : `${formatTime(dayData.opening_hour)}\n${formatTime(dayData.closing_hour)}`
+                      isClosed ? 'FERME' : `${formatTime(dayData.opening_hour)}\n${formatTime(dayData.closing_hour)}`
                     ) : 'N/A'}
                   </Text>
                 </View>
@@ -685,7 +837,7 @@ const BranchDetailScreen = ({ route, navigation }) => {
               <View style={styles.contactIconContainer}>
                 <Ionicons name="call" size={28} color="#00FF88" />
               </View>
-              <Text style={styles.contactTitle}>Téléphone</Text>
+              <Text style={styles.contactTitle}>Telephone</Text>
               <Text style={styles.contactNumber}>{branch.phone}</Text>
               <View style={styles.contactAction}>
                 <Text style={styles.contactActionText}>Appeler</Text>
@@ -779,15 +931,15 @@ const BranchDetailScreen = ({ route, navigation }) => {
                 ]}>
                   <Text style={styles.modalSessionTitle}>{item.title}</Text>
                   <Text style={styles.modalSessionInfo}>
-                    {new Date(item.session_date).toLocaleString()} • {item.duration} min
+                    {new Date(item.session_date).toLocaleString()} | {item.duration} min
                   </Text>
                   <Text style={styles.modalSessionInfo}>Coach: {item.coach?.name || 'N/A'}</Text>
                   <View style={styles.modalBadgeContainer}>
-                    {item.is_for_women && <Text style={[styles.modalBadge, styles.womenModalBadge]}>👩 Femmes</Text>}
-                    {item.is_for_kids && <Text style={[styles.modalBadge, styles.kidsModalBadge]}>🧒 Enfants</Text>}
-                    {item.is_free && <Text style={[styles.modalBadge, styles.freeModalBadge]}>🎁 Gratuit</Text>}
+                    {item.is_for_women && <Text style={[styles.modalBadge, styles.womenModalBadge]}>Femmes</Text>}
+                    {item.is_for_kids && <Text style={[styles.modalBadge, styles.kidsModalBadge]}>Enfants</Text>}
+                    {item.is_free && <Text style={[styles.modalBadge, styles.freeModalBadge]}>Gratuit</Text>}
                     {!item.is_free && !item.is_for_women && !item.is_for_kids && (
-                      <Text style={[styles.modalBadge, styles.paidModalBadge]}>💰 Payant</Text>
+                      <Text style={[styles.modalBadge, styles.paidModalBadge]}>Payant</Text>
                     )}
                   </View>
                 </View>
@@ -809,75 +961,152 @@ const BranchDetailScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#000000' 
+  container: {
+    flex: 1,
+    backgroundColor: '#0B0B0F',
   },
   heroSection: {
-    height: 200,
-    backgroundColor: '#FF3B30',
-    position: 'relative',
+    height: 260,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroTopBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  headerOverlay: {
+  heroPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    gap: 6,
   },
-  branchName: { 
-    fontSize: 32, 
-    fontWeight: '900', 
-    color: '#FFFFFF', 
-    textAlign: 'center',
-    letterSpacing: 1,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+  heroPillText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  heroContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    justifyContent: 'flex-end',
+    paddingBottom: 26,
+    gap: 6,
+  },
+  branchName: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   branchSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 8,
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#E5E7EB',
+    opacity: 0.9,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 6,
+  },
+  heroMetaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  heroStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  heroMetaText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  heroMetaSub: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    opacity: 0.8,
+    marginLeft: 8,
+    fontWeight: '600',
   },
   quickActionsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 25,
-    justifyContent: 'space-around',
-    backgroundColor: '#111111',
-    marginTop: -20,
-    marginHorizontal: 15,
-    borderRadius: 20,
-    elevation: 8,
-    shadowColor: '#FF3B30',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    gap: 10,
+    paddingHorizontal: 16,
+    marginTop: -26,
+    marginBottom: 10,
   },
-  quickActionButton: {
-    alignItems: 'center',
+  quickActionCard: {
     flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#1F1F2A',
   },
-  actionIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 59, 48, 0.1)',
-    alignItems: 'center',
+  quickActionGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  quickActionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 59, 48, 0.3)',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  actionText: {
+  quickActionTextWrap: {
+    gap: 2,
+  },
+  actionTitle: {
     color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  actionSubtitle: {
+    color: '#9CA3AF',
     fontSize: 12,
     fontWeight: '600',
-    textAlign: 'center',
   },
-  section: { 
-    marginTop: 30,
+  section: {
+    marginTop: 24,
     paddingHorizontal: 20,
   },
   sectionHeader: {
@@ -923,131 +1152,134 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   coachListContainer: { 
-    paddingVertical: 10,
-    paddingHorizontal: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 12,
   },
-  coachCard: {
+  coachBubble: {
+    width: 88,
     alignItems: 'center',
-    marginRight: 20,
-    width: 120,
-    backgroundColor: '#1A1A1A',
-    padding: 15,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#333333',
+    gap: 6,
   },
-  coachImageContainer: {
+  coachAvatarWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#16161D',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
     position: 'relative',
-    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#1F1F2A',
   },
-  coachImage: { 
-    width: 80, 
-    height: 80, 
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: '#333333',
+  coachAvatar: {
+    width: '100%',
+    height: '100%',
   },
   coachImageUnavailable: {
-    opacity: 0.5,
+    opacity: 0.55,
   },
-  darkOverlay: {
+  coachPresenceDot: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 40,
+    bottom: 4,
+    right: 4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#0F1016',
   },
-  availabilityDot: {
-    position: 'absolute',
-    bottom: 5,
-    right: 5,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 3,
-    borderColor: '#1A1A1A',
-  },
-  coachName: { 
-    fontSize: 16, 
-    color: '#FFFFFF', 
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 4,
+  coachNameBubble: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13,
   },
   coachNameUnavailable: {
-    color: '#888888',
+    color: '#8E8E93',
   },
-  availabilityStatus: {
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
+  coachStatusChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  coachStatusChipText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
   // Sessions styles
   sessionsListContainer: {
     paddingBottom: 10,
   },
   sessionCard: {
-    backgroundColor: '#1A1A1A',
-    padding: 20,
-    borderRadius: 15,
-    marginBottom: 15,
+    backgroundColor: '#111118',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: '#1F1F2A',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
   },
   womenOnlyCard: {
-    backgroundColor: 'rgba(255, 105, 180, 0.3)',
+    backgroundColor: 'rgba(255, 105, 180, 0.12)',
     borderColor: '#FF69B4',
   },
   kidsOnlyCard: {
-    backgroundColor: 'rgba(100, 210, 255, 0.3)',
+    backgroundColor: 'rgba(100, 210, 255, 0.12)',
     borderColor: '#64D2FF',
   },
   freeOnlyCard: {
-    backgroundColor: 'rgba(0, 255, 136, 0.3)',
+    backgroundColor: 'rgba(0, 255, 136, 0.12)',
     borderColor: '#00FF88',
   },
-  sessionTitle: {
-    fontSize: 18,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  sessionInfo: {
-    color: '#CCCCCC',
-    fontSize: 14,
-    marginBottom: 5,
-  },
-  badgeContainer: {
+  sessionHeader: { marginBottom: 4 },
+  sessionTitleWrap: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 10,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  sessionTitle: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    flex: 1,
   },
   sessionBadge: {
-    fontSize: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 12,
-    marginRight: 8,
-    marginBottom: 5,
-    overflow: 'hidden',
   },
-  womenBadge: {
-    backgroundColor: 'rgba(255, 105, 180, 0.2)',
-    color: '#FF69B4',
+  sessionBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
-  kidsBadge: {
-    backgroundColor: 'rgba(100, 210, 255, 0.2)',
-    color: '#64D2FF',
+  sessionMeta: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    marginTop: 6,
   },
-  freeBadge: {
-    backgroundColor: 'rgba(0, 255, 136, 0.2)',
-    color: '#00FF88',
+  sessionFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
   },
-  paidBadge: {
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
-    color: '#FFD700',
+  sessionMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sessionMetaText: {
+    color: '#E5E7EB',
+    fontSize: 12,
+    fontWeight: '700',
   },
   // Hours styles
   hoursScrollContainer: {
@@ -1055,13 +1287,13 @@ const styles = StyleSheet.create({
   },
   dayCardHorizontal: {
     width: 110,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#111118',
     padding: 15,
     borderRadius: 15,
     marginRight: 15,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#333333',
+    borderColor: '#1F1F2A',
     minHeight: 80,
     justifyContent: 'center',
   },
@@ -1108,13 +1340,13 @@ const styles = StyleSheet.create({
   },
   contactCard: {
     width: '48%',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#111118',
     borderRadius: 18,
     padding: 20,
     marginBottom: 15,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: '#1F1F2A',
     minHeight: 160,
   },
   contactIconContainer: {
@@ -1126,7 +1358,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 15,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#1F1F2A',
   },
   contactTitle: {
     fontSize: 16,
@@ -1238,12 +1470,12 @@ const styles = StyleSheet.create({
   },
   dayColumn: {
     width: 180,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#111118',
     borderRadius: 15,
     marginRight: 15,
     paddingBottom: 15,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: '#1F1F2A',
   },
   todayDayColumn: {
     borderColor: '#FF3B30',
@@ -1254,7 +1486,7 @@ const styles = StyleSheet.create({
   },
   dayHeader: {
     paddingVertical: 15,
-    backgroundColor: '#222222',
+    backgroundColor: '#16161D',
     alignItems: 'center',
     borderTopLeftRadius: 15,
     borderTopRightRadius: 15,
@@ -1272,7 +1504,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   dayNumber: {
-    color: '#CCCCCC',
+    color: '#E5E7EB',
     fontSize: 14,
     marginTop: 5,
   },
@@ -1483,3 +1715,42 @@ const styles = StyleSheet.create({
 });
 
 export default BranchDetailScreen;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

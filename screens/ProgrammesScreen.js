@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,9 @@ const ProgrammesScreen = ({ navigation }) => {
   const [error, setError] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // all | active | inactive
+  const [sortOrder, setSortOrder] = useState('newest'); // newest | oldest
 
   const [title, setTitle] = useState('');
   const [objectif, setObjectif] = useState('');
@@ -88,6 +91,52 @@ const ProgrammesScreen = ({ navigation }) => {
     if (!userId) return list;
     return list.filter((p) => String(p.user_id) === String(userId));
   };
+
+  const clearSearch = () => setSearchQuery('');
+
+  const toggleSortOrder = () =>
+    setSortOrder((prev) => (prev === 'newest' ? 'oldest' : 'newest'));
+
+  const resetFilters = () => {
+    setStatusFilter('all');
+    setSortOrder('newest');
+    clearSearch();
+  };
+
+  const getDateValue = (item) => {
+    const raw = item?.created_at || item?.updated_at;
+    if (raw) {
+      const parsed = new Date(raw).getTime();
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+    return Number(item?.id) || 0;
+  };
+
+  const visibleProgrammes = useMemo(() => {
+    let list = programmes;
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (p) =>
+          (p.title && p.title.toLowerCase().includes(query)) ||
+          (p.objectif && p.objectif.toLowerCase().includes(query)) ||
+          (p.description && p.description.toLowerCase().includes(query))
+      );
+    }
+
+    if (statusFilter !== 'all') {
+      list = list.filter((p) => (statusFilter === 'active' ? p.is_active : !p.is_active));
+    }
+
+    return [...list].sort((a, b) => {
+      const dateA = getDateValue(a);
+      const dateB = getDateValue(b);
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+  }, [programmes, searchQuery, statusFilter, sortOrder]);
 
   const resetForm = () => {
     setTitle('');
@@ -245,6 +294,75 @@ const ProgrammesScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
+      {!loading && !error && (
+        <>
+          <View style={styles.searchRow}>
+            <View style={styles.searchBox}>
+              <Icon name="search" size={16} color="#999" style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search programmes"
+                placeholderTextColor="#888"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                returnKeyType="search"
+                selectionColor="#FF3B30"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={clearSearch} style={styles.clearSearchButton}>
+                  <Icon name="times-circle" size={16} color="#999" />
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.sortButton}
+              onPress={toggleSortOrder}
+              activeOpacity={0.8}
+            >
+              <Icon
+                name={sortOrder === 'newest' ? 'sort-amount-down' : 'sort-amount-up'}
+                size={14}
+                color="#FF3B30"
+              />
+              <Text style={styles.sortButtonText}>
+                {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.filterRow}>
+            {['all', 'active', 'inactive'].map((filterKey) => {
+              const active = statusFilter === filterKey;
+              const label =
+                filterKey === 'all' ? 'All' : filterKey === 'active' ? 'Active' : 'Inactive';
+              return (
+                <TouchableOpacity
+                  key={filterKey}
+                  style={[styles.filterChip, active && styles.filterChipActive]}
+                  onPress={() => setStatusFilter(filterKey)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={styles.resultsRow}>
+            <Text style={styles.resultsText}>
+              {visibleProgrammes.length} programme{visibleProgrammes.length === 1 ? '' : 's'}
+            </Text>
+            {(searchQuery.length > 0 || statusFilter !== 'all' || sortOrder !== 'newest') && (
+              <TouchableOpacity onPress={resetFilters} activeOpacity={0.8}>
+                <Text style={styles.resetText}>Reset</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </>
+      )}
+
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#FF3B30" />
@@ -258,14 +376,27 @@ const ProgrammesScreen = ({ navigation }) => {
         </View>
       ) : (
         <FlatList
-          data={programmes}
+          data={visibleProgrammes}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderProgrammeCard}
           contentContainerStyle={{ paddingBottom: 40 }}
           ListEmptyComponent={
             <View style={styles.centerContainer}>
-              <Text style={styles.emptyText}>No programmes yet</Text>
-              <Text style={styles.emptySubText}>Create one to organize your workouts</Text>
+              <Text style={styles.emptyText}>
+                {searchQuery.trim() || statusFilter !== 'all'
+                  ? 'No programmes match your filters'
+                  : 'No programmes yet'}
+              </Text>
+              <Text style={styles.emptySubText}>
+                {searchQuery.trim() || statusFilter !== 'all'
+                  ? 'Try adjusting the search or filters'
+                  : 'Create one to organize your workouts'}
+              </Text>
+              {(searchQuery.trim() || statusFilter !== 'all' || sortOrder !== 'newest') && (
+                <TouchableOpacity style={styles.retryButton} onPress={resetFilters} activeOpacity={0.8}>
+                  <Text style={styles.retryText}>Clear filters</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />
@@ -382,6 +513,47 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addButtonText: { color: '#121212', fontWeight: '800', fontSize: 15 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchInput: { flex: 1, color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  clearSearchButton: { padding: 4 },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E1E1E',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    gap: 6,
+  },
+  sortButtonText: { color: '#FF3B30', fontWeight: '700', fontSize: 13 },
+  filterRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  filterChipActive: { backgroundColor: '#FF3B30', borderColor: '#FF3B30' },
+  filterChipText: { color: '#E5E7EB', fontWeight: '700', fontSize: 13 },
+  filterChipTextActive: { color: '#121212' },
+  resultsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  resultsText: { color: '#9CA3AF', fontWeight: '700' },
+  resetText: { color: '#FF3B30', fontWeight: '800' },
   programmeCard: {
     backgroundColor: '#1A1A1A',
     borderRadius: 16,

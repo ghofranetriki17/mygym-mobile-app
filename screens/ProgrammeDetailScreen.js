@@ -263,11 +263,6 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
       >
         <View style={styles.workoutHeader}>
           <Text style={styles.workoutTitle}>{item.title || `Workout ${item.id}`}</Text>
-          {item.pivot?.order !== undefined && (
-            <View style={styles.orderPill}>
-              <Text style={styles.orderText}>Week {item.pivot.order}</Text>
-            </View>
-          )}
         </View>
         <Text style={styles.workoutMeta}>
           {item.exercises ? `${item.exercises.length} exercises` : 'Exercises not loaded'}
@@ -281,7 +276,9 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
           {removingThis ? (
             <ActivityIndicator color="#FF6B6B" />
           ) : (
-            <Text style={styles.removeRowText}>Unattach from this programme</Text>
+            <View style={styles.removeRowInner}>
+              <Icon name="times" size={12} color="#FF6B6B" />
+            </View>
           )}
         </TouchableOpacity>
         {loadingThis ? <ActivityIndicator color="#FF3B30" style={{ marginTop: 6 }} /> : null}
@@ -315,12 +312,46 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
-      <Text style={styles.title}>{programme.title}</Text>
-      <Text style={styles.objective}>{programme.objectif || 'No objective provided'}</Text>
-      {programme.duration_weeks ? (
-        <Text style={styles.metaLine}>{programme.duration_weeks} weeks</Text>
-      ) : null}
-      {programme.description ? <Text style={styles.description}>{programme.description}</Text> : null}
+      <View style={styles.heroCard}>
+        <Text style={styles.heroKicker}>Programme</Text>
+        <Text style={styles.title}>{programme.title}</Text>
+        <Text style={styles.objective}>{programme.objectif || 'No objective provided'}</Text>
+        {programme.description ? <Text style={styles.description}>{programme.description}</Text> : null}
+
+        <View style={styles.metaRow}>
+          {programme.duration_weeks ? (
+            <View style={styles.metaPill}>
+              <Icon name="clock" size={12} color="#FF3B30" />
+              <Text style={styles.metaPillText}>{programme.duration_weeks} weeks</Text>
+            </View>
+          ) : null}
+          <View style={styles.metaPill}>
+            <Icon name="dumbbell" size={12} color="#FF3B30" />
+            <Text style={styles.metaPillText}>{programme.workouts?.length || 0} workouts</Text>
+          </View>
+        </View>
+
+        <View style={styles.heroActions}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => {
+              setNewEntries([{ workoutId: null, week: '', day: '' }]);
+              setAddModalVisible(true);
+            }}
+            activeOpacity={0.85}
+          >
+            <Icon name="plus" size={14} color="#0B0B0F" />
+            <Text style={styles.primaryButtonText}>Add workouts</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate('Programmes')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.secondaryButtonText}>Back to list</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <View style={styles.sectionHeader}>
         <Icon name="dumbbell" size={16} color="#FF3B30" />
@@ -328,18 +359,6 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
           Workouts by week/day ({programme.workouts?.length || 0})
         </Text>
       </View>
-
-      <TouchableOpacity
-        style={styles.addWorkoutButton}
-        onPress={() => {
-          setNewEntries([{ workoutId: null, week: '', day: '' }]);
-          setAddModalVisible(true);
-        }}
-        activeOpacity={0.85}
-      >
-        <Icon name="plus" size={14} color="#121212" />
-        <Text style={styles.addWorkoutButtonText}>Add workouts</Text>
-      </TouchableOpacity>
 
       {Object.keys(groupedWorkouts).length === 0 ? (
         <Text style={styles.emptyText}>No workouts attached to this programme</Text>
@@ -523,8 +542,51 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   title: { color: '#FF3B30', fontSize: 26, fontWeight: '900', marginBottom: 8 },
   objective: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginBottom: 6 },
-  metaLine: { color: '#9CA3AF', fontSize: 14, marginBottom: 6 },
   description: { color: '#CCCCCC', fontSize: 14, lineHeight: 20, marginBottom: 14 },
+  heroCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#262626',
+    padding: 16,
+    marginBottom: 16,
+  },
+  heroKicker: { color: '#9CA3AF', fontWeight: '800', fontSize: 12, textTransform: 'uppercase' },
+  metaRow: { flexDirection: 'row', gap: 10, marginBottom: 10, marginTop: 8 },
+  metaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#0F1016',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  metaPillText: { color: '#E5E7EB', fontWeight: '800', fontSize: 12 },
+  heroActions: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FF3B30',
+    borderRadius: 12,
+  },
+  primaryButtonText: { color: '#0B0B0F', fontWeight: '900', fontSize: 14 },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    backgroundColor: '#0F1016',
+  },
+  secondaryButtonText: { color: '#E5E7EB', fontWeight: '800', fontSize: 14 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   sectionTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
   calendarContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
@@ -538,12 +600,12 @@ const styles = StyleSheet.create({
   },
   dayLabel: { color: '#FF3B30', fontWeight: '800', marginBottom: 6 },
   workoutCard: {
-    backgroundColor: '#1A1A1A',
-    padding: 12,
-    borderRadius: 10,
+    backgroundColor: '#0F1016',
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    marginBottom: 8,
+    borderColor: '#1F1F2A',
+    marginBottom: 10,
   },
   workoutHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   workoutTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
@@ -559,26 +621,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#333',
   },
+  removeRowInner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   removeRowText: { color: '#FF6B6B', fontWeight: '800', fontSize: 13 },
   emptyText: { color: '#9CA3AF', fontStyle: 'italic', marginTop: 8 },
   emptyDayText: { color: '#777', fontSize: 12, fontStyle: 'italic' },
   weekContainer: {
     marginBottom: 14,
-    padding: 10,
-    backgroundColor: '#161616',
-    borderRadius: 12,
+    padding: 12,
+    backgroundColor: '#111118',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#222',
+    borderColor: '#1F1F2A',
   },
   weekTitle: { color: '#FFFFFF', fontWeight: '900', marginBottom: 8, fontSize: 14 },
   weekTabs: { flexDirection: 'row', paddingVertical: 4, gap: 8 },
   weekTab: {
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#0F1016',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#1F1F2A',
   },
   weekTabActive: {
     backgroundColor: '#FF3B30',
@@ -586,18 +649,6 @@ const styles = StyleSheet.create({
   },
   weekTabText: { color: '#9CA3AF', fontWeight: '700' },
   weekTabTextActive: { color: '#121212', fontWeight: '900' },
-  addWorkoutButton: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 14,
-    gap: 8,
-    marginBottom: 12,
-  },
-  addWorkoutButtonText: { color: '#121212', fontWeight: '800', fontSize: 14 },
   errorText: { color: '#FF6F61', fontSize: 16 },
   modalOverlay: {
     flex: 1,

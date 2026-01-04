@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,17 +14,18 @@ import {
   Modal,
   RefreshControl,
   Linking,
+  Animated,
 } from 'react-native';
 import { branchAPI, groupSessionAPI, parametersAPI } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FontAwesome, MaterialIcons, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome, MaterialIcons, Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.85;
-const CARD_SPACING = 16;
+const { width, height } = Dimensions.get('window');
+const CARD_WIDTH = width * 0.8;
 const HERO_FALLBACK =
-  'data:image/png;base64,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';
+  'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop';
 
 const HomeScreen = ({ navigation }) => {
   const [branches, setBranches] = useState([]);
@@ -40,12 +41,17 @@ const HomeScreen = ({ navigation }) => {
   const [parameters, setParameters] = useState({});
   const [loadingParams, setLoadingParams] = useState(true);
   const [cityFilter, setCityFilter] = useState('all');
+  const [scrollY] = useState(new Animated.Value(0));
 
   useFocusEffect(
     React.useCallback(() => {
       loadAllData();
     }, [])
   );
+
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   useEffect(() => {
     const q = searchQuery.toLowerCase();
@@ -118,6 +124,8 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  const requestNotificationPermission = async () => false; // Notifications disabled until expo-notifications is installed
+
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
@@ -153,78 +161,9 @@ const HomeScreen = ({ navigation }) => {
     });
   };
 
-  const availabilitySnippet = (branch) => {
-    if (!branch.availabilities || !branch.availabilities.length) return 'Hours not provided';
-    return branch.availabilities
-      .slice(0, 2)
-      .map(
-        (a) => `${a.day_of_week?.slice(0, 3) || ''} ${a.opening_hour || '--:--'}-${a.closing_hour || '--:--'}`
-      )
-      .join(' • ');
-  };
-
-  const renderBranchItem = ({ item }) => (
-    <TouchableOpacity style={styles.branchCard} onPress={() => handleBranchPress(item)}>
-      <View style={styles.branchCardHeader}>
-        <View style={styles.branchIcon}>
-          <MaterialIcons name="fitness-center" size={20} color="#FF5C39" />
-        </View>
-        <View style={styles.cityBadge}>
-          <Text style={styles.cityBadgeText}>{item.city || 'Location'}</Text>
-        </View>
-      </View>
-      
-      <Text style={styles.branchName}>{item.name}</Text>
-      
-      <View style={styles.branchInfo}>
-        <View style={styles.infoRow}>
-          <MaterialIcons name="location-on" size={16} color="#9CA3AF" />
-          <Text style={styles.infoText} numberOfLines={1}>{item.address}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <MaterialIcons name="phone" size={16} color="#9CA3AF" />
-          <Text style={styles.infoText}>{item.phone}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <MaterialIcons name="access-time" size={16} color="#9CA3AF" />
-          <Text style={styles.infoText}>{availabilitySnippet(item)}</Text>
-        </View>
-      </View>
-      
-      <TouchableOpacity style={styles.viewDetailsButton}>
-        <Text style={styles.viewDetailsText}>View Details</Text>
-        <MaterialIcons name="arrow-forward" size={16} color="white" />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-
-  const renderBookingItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.bookingCard}
-      onPress={() => {
-        setShowBookingsModal(false);
-        navigation.navigate('SessionDetail', { session: item });
-      }}
-    >
-      <View style={styles.bookingHeader}>
-        <View style={styles.bookingIconContainer}>
-          <MaterialCommunityIcons name="calendar-check" size={22} color="#FF5C39" />
-        </View>
-        <View style={styles.bookingContent}>
-          <Text style={styles.bookingTitle}>{item.title}</Text>
-          <Text style={styles.bookingDate}>{formatDate(item.session_date)}</Text>
-          <Text style={styles.bookingLocation}>
-            {item.branch?.name || 'Unknown location'}
-          </Text>
-        </View>
-        <MaterialIcons name="chevron-right" size={24} color="#9CA3AF" />
-      </View>
-    </TouchableOpacity>
-  );
-
-  const appName = parameters.app_name || 'GymPro';
-  const welcomeMessage = parameters.welcome_message || 'Find your perfect workout spot';
-  const siteDescription = parameters.site_description || 'Premium fitness experience';
+  const appName = parameters.app_name || 'ATHLETIC';
+  const welcomeMessage = parameters.welcome_message || 'Elevate Your Training';
+  const siteDescription = parameters.site_description || 'Premium Performance Hub';
   const openingHours = parameters.opening_hours || '06:00-22:00';
   const heroImage = parameters.hero_image || HERO_FALLBACK;
 
@@ -248,7 +187,7 @@ const HomeScreen = ({ navigation }) => {
 
   const initials = useMemo(() => {
     const parts = (userName || '').split(' ').filter(Boolean);
-    return parts.slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || 'U';
+    return parts.slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || 'A';
   }, [userName]);
 
   const cities = useMemo(() => {
@@ -256,22 +195,122 @@ const HomeScreen = ({ navigation }) => {
     return ['all', ...unique];
   }, [branches]);
 
+  const branchHours = (branch) => {
+    const slots = Array.isArray(branch?.availabilities) ? branch.availabilities : [];
+    if (!slots.length) return null;
+    const first = slots[0];
+    const day = first.day_of_week ? first.day_of_week.slice(0, 3).toUpperCase() : '';
+    const open = first.opening_hour || '--:--';
+    const close = first.closing_hour || '--:--';
+    return `${day} ${open}-${close}`;
+  };
+
+  const renderBranchItem = ({ item }) => (
+    <TouchableOpacity style={styles.branchCard} onPress={() => handleBranchPress(item)} activeOpacity={0.9}>
+      <Image
+        source={{
+          uri:
+            item.image_url ||
+            'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&auto=format&fit=crop',
+        }}
+        style={styles.branchImage}
+      />
+      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.branchGradient} />
+      <View style={styles.branchContent}>
+        <View style={styles.branchHeader}>
+          <View style={styles.distanceBadge}>
+            <Ionicons name="location" size={12} color="white" />
+            <Text style={styles.distanceText}>{item.city || 'Location'}</Text>
+          </View>
+        </View>
+        <Text style={styles.branchName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <View style={styles.branchDetails}>
+          <View style={styles.detailRow}>
+            <Ionicons name="location-outline" size={14} color="#8E8E93" />
+            <Text style={styles.detailText} numberOfLines={1}>
+              {item.address || item.city || 'Address TBD'}
+            </Text>
+          </View>
+          {branchHours(item) ? (
+            <View style={styles.detailRow}>
+              <Ionicons name="time-outline" size={14} color="#8E8E93" />
+              <Text style={styles.detailText} numberOfLines={1}>
+                {branchHours(item)}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.branchFooter}>
+          <TouchableOpacity style={styles.bookButton} onPress={() => handleBranchPress(item)}>
+            <Text style={styles.bookButtonText}>View</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderBookingItem = ({ item }) => {
+    const isUpcoming = item.session_date && new Date(item.session_date) >= new Date();
+    const statusLabel = isUpcoming ? 'Upcoming' : 'Past';
+    const statusColor = isUpcoming ? '#34C759' : '#9CA3AF';
+
+    return (
+      <TouchableOpacity
+        style={styles.bookingCard}
+        onPress={() => {
+          setShowBookingsModal(false);
+          navigation.navigate('SessionDetail', { session: item });
+        }}
+        activeOpacity={0.9}
+      >
+        <LinearGradient
+          colors={['#121218', '#1F1F2A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.bookingGradient}
+        />
+        <View style={styles.bookingHeaderRow}>
+          <View style={styles.bookingLocationRow}>
+            <Ionicons name="business-outline" size={12} color="#9CA3AF" />
+            <Text style={styles.bookingLocationText}>{item.branch?.name || 'Unknown location'}</Text>
+          </View>
+          <View style={[styles.bookingStatusPill, { backgroundColor: `${statusColor}22`, borderColor: statusColor }]}>
+            <View style={[styles.statusDotSmall, { backgroundColor: statusColor }]} />
+            <Text style={[styles.bookingStatusText, { color: statusColor }]}>{statusLabel}</Text>
+          </View>
+        </View>
+        <View style={styles.bookingContent}>
+          <View style={styles.bookingIcon}>
+            <MaterialCommunityIcons name="dumbbell" size={22} color="#FF3B30" />
+          </View>
+          <View style={styles.bookingDetails}>
+            <Text style={styles.bookingTitle}>{item.title}</Text>
+            <Text style={styles.bookingTime}>{formatDate(item.session_date)}</Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={22} color="#8E8E93" />
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#FF5C39" />
-        <Text style={styles.loadingText}>Loading gyms...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF3B30" />
+        <Text style={styles.loadingText}>Initializing...</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centerContainer}>
-        <MaterialIcons name="error-outline" size={60} color="#FF5C39" />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadBranches}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+      <View style={styles.loadingContainer}>
+        <MaterialIcons name="error-outline" size={60} color="#FF3B30" />
+        <Text style={styles.loadingText}>{error}</Text>
+        <TouchableOpacity style={styles.modalButton} onPress={loadAllData}>
+          <Text style={styles.modalButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -279,109 +318,91 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: true,
+        })}
+        scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF5C39" colors={["#FF5C39"]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF3B30" colors={["#FF3B30"]} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={styles.headerUser}
-            onPress={() => navigation.navigate('Profile')}
-          >
-            <View style={styles.userAvatar}>
-              <Text style={styles.userAvatarText}>{initials}</Text>
+        {/* Hero Section */}
+        <View style={styles.heroContainer}>
+          <Image source={{ uri: heroImage }} style={styles.heroImage} blurRadius={2} />
+          <LinearGradient colors={['rgba(0,0,0,0.8)', 'transparent', 'rgba(0,0,0,0.8)']} style={styles.heroGradient} />
+
+          <View style={styles.heroContent}>
+            <View style={styles.userSection}>
+              <View style={styles.userInfo}>
+                <TouchableOpacity style={styles.avatarContainer} onPress={() => navigation.navigate('Profile')}>
+                  <LinearGradient colors={['#FF3B30', '#FF9500']} style={styles.avatarGradient} />
+                  <Text style={styles.avatarText}>{initials}</Text>
+                </TouchableOpacity>
+                <View>
+                  <Text style={styles.welcomeText}>Welcome back,</Text>
+                  <Text style={styles.userName}>{userName || 'Athlete'}</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.notificationButton} onPress={() => navigation.navigate('Notifications')}>
+                <Ionicons name="notifications-outline" size={24} color="white" />
+                {bookingsGrouped.upcoming.length > 0 ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{bookingsGrouped.upcoming.length}</Text>
+                  </View>
+                ) : null}
+              </TouchableOpacity>
             </View>
-            <View>
-              <Text style={styles.greetingText}>Welcome back,</Text>
-              <Text style={styles.headerTitle}>{userName || 'Athlete'}</Text>
+
+            <View style={styles.heroTextContainer}>
+              <Text style={styles.heroTitle}>{welcomeMessage}</Text>
+              <Text style={styles.heroSubtitle}>{siteDescription}</Text>
             </View>
-          </TouchableOpacity>
-          <View style={styles.headerActions}>
-            <TouchableOpacity 
-              style={styles.iconButton}
-              onPress={() => navigation.navigate('Notifications')}
-            >
-              <Ionicons name="notifications-outline" size={24} color="white" />
-            </TouchableOpacity>
+
+            <View style={styles.statsContainer}>
+              <View style={styles.statCard}>
+                <Ionicons name="business-outline" size={20} color="#FF3B30" />
+                <Text style={styles.statNumber}>{branches.length}</Text>
+                <Text style={styles.statLabel}>Locations</Text>
+              </View>
+              <View style={styles.statCard}>
+                <MaterialCommunityIcons name="clock-outline" size={20} color="#FF3B30" />
+                <Text style={styles.statNumber}>{openingHours}</Text>
+                <Text style={styles.statLabel}>Hours</Text>
+              </View>
+              <View style={styles.statCard}>
+                <MaterialCommunityIcons name="calendar-check" size={20} color="#FF3B30" />
+                <Text style={styles.statNumber}>{bookingsGrouped.upcoming.length}</Text>
+                <Text style={styles.statLabel}>Bookings</Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        {/* Hero Banner */}
-        <View style={styles.heroBanner}>
-          {heroImage ? (
-            <Image source={{ uri: heroImage }} style={styles.heroImage} />
-          ) : (
-            <View style={styles.heroGradient} />
-          )}
-          <View style={styles.heroOverlay}>
-            <Text style={styles.heroTitle}>{appName}</Text>
-            <Text style={styles.heroSubtitle}>{siteDescription}</Text>
-            <View style={styles.heroStats}>
-              <View style={styles.heroStat}>
-                <MaterialIcons name="store" size={18} color="white" />
-                <Text style={styles.heroStatText}>{branches.length} Gyms</Text>
-              </View>
-              <View style={styles.heroStat}>
-                <MaterialIcons name="access-time" size={18} color="white" />
-                <Text style={styles.heroStatText}>{openingHours}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity 
-            style={[styles.quickAction, styles.quickActionPrimary]}
-            onPress={() => navigation.navigate('BranchMap')}
-          >
-            <MaterialIcons name="map" size={22} color="white" />
-            <Text style={styles.quickActionText}>Explore Map</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.quickAction, styles.quickActionSecondary]}
-            onPress={() => setShowBookingsModal(true)}
-          >
-            <MaterialCommunityIcons name="calendar-check" size={22} color="#FF5C39" />
-            <View>
-              <Text style={styles.quickActionTextSecondary}>My Bookings</Text>
-              {bookingsGrouped.upcoming.length > 0 && (
-                <Text style={styles.quickActionSubtext}>{bookingsGrouped.upcoming.length} active</Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Search */}
-        <View style={styles.searchSection}>
+        {/* Main Content */}
+        <View style={styles.contentContainer}>
+          {/* Search & City Filter */}
           <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#9CA3AF" />
+            <Ionicons name="search" size={20} color="#8E8E93" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search gyms or cities..."
-              placeholderTextColor="#6B7280"
+              placeholder="Search gyms, locations..."
+              placeholderTextColor="#8E8E93"
               value={searchQuery}
               onChangeText={setSearchQuery}
+              returnKeyType="search"
             />
             {searchQuery !== '' && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <MaterialIcons name="close" size={20} color="#9CA3AF" />
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="#8E8E93" />
               </TouchableOpacity>
             )}
           </View>
 
-          {/* City Filter */}
           {cities.length > 1 && (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.cityFilters}
-            >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cityFilters}>
               {cities.map((c) => (
                 <TouchableOpacity
                   key={c}
@@ -395,158 +416,136 @@ const HomeScreen = ({ navigation }) => {
               ))}
             </ScrollView>
           )}
-        </View>
 
-   
+          {/* Quick Actions */}
+          <View style={styles.quickActions}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => navigation.navigate('BranchMap')}>
+              <LinearGradient colors={['#FF3B30', '#FF9500']} style={styles.quickActionGradient} />
+              <Ionicons name="map-outline" size={24} color="white" />
+              <Text style={styles.quickActionText}>Map</Text>
+            </TouchableOpacity>
 
-        {/* Branches List */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {searchQuery || cityFilter !== 'all' ? 'Search Results' : 'Explore Gyms'}
-            </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('BranchMap')}>
-              <Text style={styles.seeAllLink}>View Map</Text>
+            <TouchableOpacity style={styles.quickAction} onPress={() => setShowBookingsModal(true)}>
+              <LinearGradient colors={['#2A2A2A', '#1A1A1A']} style={styles.quickActionGradient} />
+              <MaterialCommunityIcons name="calendar-check" size={24} color="#FF3B30" />
+              <View style={styles.bookingsInfo}>
+                <Text style={styles.quickActionText}>Bookings</Text>
+                {bookingsGrouped.upcoming.length > 0 && (
+                  <Text style={styles.bookingsCount}>{bookingsGrouped.upcoming.length} active</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.quickAction} onPress={() => navigation.navigate('WorkoutList')}>
+              <LinearGradient colors={['#2A2A2A', '#1A1A1A']} style={styles.quickActionGradient} />
+              <MaterialCommunityIcons name="run-fast" size={24} color="#FF3B30" />
+              <Text style={styles.quickActionText}>Workouts</Text>
             </TouchableOpacity>
           </View>
-          
-          {filteredBranches.length > 0 ? (
-            <FlatList
-              horizontal
-              data={filteredBranches}
-              renderItem={renderBranchItem}
-              keyExtractor={(item) => item.id.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.branchList}
-              snapToInterval={CARD_WIDTH + CARD_SPACING}
-              decelerationRate="fast"
-            />
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="search-off" size={48} color="#374151" />
-              <Text style={styles.emptyStateText}>No gyms found</Text>
-              <Text style={styles.emptyStateSubtext}>Try adjusting your filters</Text>
+
+          {/* Branch List */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {searchQuery || cityFilter !== 'all' ? 'Results' : 'Our Locations'}
+              </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('BranchMap')}>
+                <Text style={styles.seeAllText}>View All</Text>
+              </TouchableOpacity>
+            </View>
+
+            {filteredBranches.length > 0 ? (
+              <FlatList
+                horizontal
+                data={filteredBranches}
+                renderItem={renderBranchItem}
+                keyExtractor={(item) => item.id.toString()}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.branchList}
+                snapToInterval={CARD_WIDTH + 16}
+                decelerationRate="fast"
+              />
+            ) : (
+              <View style={styles.emptyState}>
+                <MaterialCommunityIcons name="map-marker-off" size={64} color="#3A3A3C" />
+                <Text style={styles.emptyStateTitle}>No locations found</Text>
+                <Text style={styles.emptyStateSubtitle}>Try adjusting your search</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Upcoming Sessions */}
+          {upcomingSessions.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Upcoming Sessions</Text>
+                <TouchableOpacity onPress={() => setShowBookingsModal(true)}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.sessionsList}>
+                {upcomingSessions.map((session, index) => (
+                  <TouchableOpacity
+                    key={session.id || index}
+                    style={styles.sessionItem}
+                    onPress={() => navigation.navigate('SessionDetail', { session })}
+                  >
+                    <View style={styles.sessionIconContainer}>
+                      <MaterialCommunityIcons name="dumbbell" size={20} color="#FF3B30" />
+                    </View>
+                    <View style={styles.sessionContent}>
+                      <Text style={styles.sessionTitle}>{session.title}</Text>
+                      <Text style={styles.sessionTime}>{formatDate(session.session_date)}</Text>
+                    </View>
+                    <View style={styles.sessionStatus}>
+                      <View style={styles.statusDot} />
+                      <Text style={styles.statusText}>Confirmed</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Social Links */}
+          {(parameters.facebook_url || parameters.instagram_url) && (
+            <View style={styles.socialSection}>
+              <Text style={styles.sectionTitle}>Connect With Us</Text>
+              <View style={styles.socialButtons}>
+                {parameters.instagram_url && (
+                  <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialPress(parameters.instagram_url)}>
+                    <LinearGradient colors={['#833AB4', '#FD1D1D', '#FCAF45']} style={styles.socialButtonGradient} />
+                    <FontAwesome name="instagram" size={20} color="white" />
+                  </TouchableOpacity>
+                )}
+                {parameters.facebook_url && (
+                  <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialPress(parameters.facebook_url)}>
+                    <LinearGradient colors={['#1877F2', '#0A5EC2']} style={styles.socialButtonGradient} />
+                    <FontAwesome name="facebook" size={20} color="white" />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           )}
         </View>
+      </Animated.ScrollView>
 
-        {/* Upcoming Sessions */}
-        {upcomingSessions.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Upcoming Sessions</Text>
-              <TouchableOpacity onPress={() => setShowBookingsModal(true)}>
-                <Text style={styles.seeAllLink}>See All</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.sessionsList}>
-              {upcomingSessions.map((session) => (
-                <TouchableOpacity
-                  key={session.id}
-                  style={styles.sessionCard}
-                  onPress={() => navigation.navigate('SessionDetail', { session })}
-                >
-                  <View style={styles.sessionIcon}>
-                    <MaterialCommunityIcons name="dumbbell" size={20} color="#FF5C39" />
-                  </View>
-                  <View style={styles.sessionInfo}>
-                    <Text style={styles.sessionTitle}>{session.title}</Text>
-                    <Text style={styles.sessionMeta}>{formatDate(session.session_date)}</Text>
-                    <Text style={styles.sessionLocation}>{session.branch?.name || 'Unknown'}</Text>
-                  </View>
-                  <MaterialIcons name="chevron-right" size={24} color="#6B7280" />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Contact & Social */}
-        {(parameters.contact_phone || parameters.contact_email) && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Get in Touch</Text>
-            <View style={styles.contactCard}>
-              {parameters.contact_phone && (
-                <View style={styles.contactRow}>
-                  <View style={styles.contactIcon}>
-                    <MaterialIcons name="phone" size={20} color="#FF5C39" />
-                  </View>
-                  <Text style={styles.contactText}>{parameters.contact_phone}</Text>
-                </View>
-              )}
-              {parameters.contact_email && (
-                <View style={styles.contactRow}>
-                  <View style={styles.contactIcon}>
-                    <MaterialIcons name="email" size={20} color="#FF5C39" />
-                  </View>
-                  <Text style={styles.contactText}>{parameters.contact_email}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {(parameters.facebook_url || parameters.instagram_url || parameters.twitter_url) && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Follow Us</Text>
-            <View style={styles.socialButtons}>
-              {parameters.facebook_url && (
-                <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialPress(parameters.facebook_url)}
-                >
-                  <FontAwesome name="facebook" size={24} color="#1877F2" />
-                </TouchableOpacity>
-              )}
-              {parameters.instagram_url && (
-                <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialPress(parameters.instagram_url)}
-                >
-                  <FontAwesome name="instagram" size={24} color="#E4405F" />
-                </TouchableOpacity>
-              )}
-              {parameters.twitter_url && (
-                <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialPress(parameters.twitter_url)}
-                >
-                  <FontAwesome name="twitter" size={24} color="#1DA1F2" />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* Logout */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <FontAwesome name="sign-out" size={18} color="#EF4444" />
-          <Text style={styles.logoutText}>Logout</Text>
+      {/* Floating Action Menu */}
+      <View style={styles.fabMenu}>
+        <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('UserProgress')}>
+          <LinearGradient colors={['#FF3B30', '#FF9500']} style={styles.fabGradient} />
+          <Feather name="bar-chart" size={24} color="white" />
         </TouchableOpacity>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
+        <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('Programmes')}>
+          <LinearGradient colors={['#2A2A2A', '#1A1A1A']} style={styles.fabGradient} />
+          <Feather name="list" size={24} color="#FF3B30" />
+        </TouchableOpacity>
 
-      {/* Floating Action Buttons */}
-      <View style={styles.fabContainer}>
-        <TouchableOpacity 
-          style={styles.fab}
-          onPress={() => navigation.navigate('UserProgress')}
-        >
-          <FontAwesome name="line-chart" size={22} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.fab}
-          onPress={() => navigation.navigate('WorkoutList')}
-        >
-          <FontAwesome name="heartbeat" size={22} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.fab}
-          onPress={() => navigation.navigate('Programmes')}
-        >
-          <FontAwesome name="list-alt" size={22} color="white" />
+        <TouchableOpacity style={styles.fab} onPress={handleLogout}>
+          <LinearGradient colors={['#2A2A2A', '#1A1A1A']} style={styles.fabGradient} />
+          <Feather name="log-out" size={24} color="#FF3B30" />
         </TouchableOpacity>
       </View>
 
@@ -554,55 +553,66 @@ const HomeScreen = ({ navigation }) => {
       <Modal
         visible={showBookingsModal}
         animationType="slide"
-        transparent={false}
+        presentationStyle="formSheet"
         onRequestClose={() => setShowBookingsModal(false)}
       >
         <View style={styles.modalContainer}>
+          <LinearGradient colors={['#000000', '#1A1A1A']} style={styles.modalBackground} />
+
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>My Bookings</Text>
-            <TouchableOpacity onPress={() => setShowBookingsModal(false)}>
-              <MaterialIcons name="close" size={28} color="white" />
+            <View>
+              <Text style={styles.modalTitle}>My Bookings</Text>
+              <View style={styles.modalBadgeRow}>
+                <View style={styles.modalBadge}>
+                  <Text style={styles.modalBadgeLabel}>Upcoming</Text>
+                  <Text style={styles.modalBadgeValue}>{bookingsGrouped.upcoming.length}</Text>
+                </View>
+                <View style={[styles.modalBadge, { backgroundColor: '#111118', borderColor: '#1F1F2A' }]}>
+                  <Text style={styles.modalBadgeLabel}>Past</Text>
+                  <Text style={styles.modalBadgeValue}>{bookingsGrouped.past.length}</Text>
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowBookingsModal(false)}>
+              <Ionicons name="close" size={28} color="white" />
             </TouchableOpacity>
           </View>
 
           {loadingBookings ? (
-            <ActivityIndicator size="large" color="#FF5C39" style={styles.modalLoader} />
+            <ActivityIndicator size="large" color="#FF3B30" style={styles.modalLoader} />
           ) : bookingsGrouped.upcoming.length > 0 || bookingsGrouped.past.length > 0 ? (
-            <ScrollView contentContainerStyle={styles.bookingsList}>
+            <ScrollView style={styles.modalContent}>
               {bookingsGrouped.upcoming.length > 0 && (
-                <>
+                <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>Upcoming</Text>
                   {bookingsGrouped.upcoming.map((item) => (
-                    <View key={`up-${item.id || item.session_date}`}>
-                      {renderBookingItem({ item })}
-                    </View>
+                    <View key={`up-${item.id || item.session_date}`}>{renderBookingItem({ item })}</View>
                   ))}
-                </>
+                </View>
               )}
+
               {bookingsGrouped.past.length > 0 && (
-                <>
-                  <Text style={styles.modalSectionTitle}>Past</Text>
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Past Sessions</Text>
                   {bookingsGrouped.past.map((item) => (
-                    <View key={`past-${item.id || item.session_date}`}>
-                      {renderBookingItem({ item })}
-                    </View>
+                    <View key={`past-${item.id || item.session_date}`}>{renderBookingItem({ item })}</View>
                   ))}
-                </>
+                </View>
               )}
             </ScrollView>
           ) : (
-            <View style={styles.modalEmptyState}>
-              <MaterialCommunityIcons name="calendar-remove" size={64} color="#374151" />
-              <Text style={styles.modalEmptyText}>No Bookings Yet</Text>
-              <Text style={styles.modalEmptySubtext}>Start exploring and book your first session</Text>
+            <View style={styles.modalEmpty}>
+              <MaterialCommunityIcons name="calendar-blank" size={80} color="#3A3A3C" />
+              <Text style={styles.modalEmptyTitle}>No bookings yet</Text>
+              <Text style={styles.modalEmptySubtitle}>Start your fitness journey today</Text>
               <TouchableOpacity
-                style={styles.modalCta}
+                style={styles.modalButton}
                 onPress={() => {
                   setShowBookingsModal(false);
                   navigation.navigate('BranchMap');
                 }}
               >
-                <Text style={styles.modalCtaText}>Explore Gyms</Text>
+                <Text style={styles.modalButtonText}>Explore Locations</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -612,633 +622,622 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
-const PromoCard = ({ title, subtitle }) => (
-  <View style={styles.promoCard}>
-    <View style={styles.promoIcon}>
-      <MaterialIcons name="local-offer" size={24} color="#FF5C39" />
-    </View>
-    <Text style={styles.promoTitle}>{title}</Text>
-    {subtitle && <Text style={styles.promoSubtitle}>{subtitle}</Text>}
-    <TouchableOpacity style={styles.promoButton}>
-      <Text style={styles.promoButtonText}>Claim Now</Text>
-      <MaterialIcons name="arrow-forward" size={16} color="white" />
-    </TouchableOpacity>
-  </View>
-);
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: '#000000',
   },
-  centerContainer: {
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0A0A0A',
-    padding: 20,
+    backgroundColor: '#000000',
   },
   loadingText: {
-    color: '#9CA3AF',
-    marginTop: 16,
+    color: '#8E8E93',
     fontSize: 16,
+    marginTop: 20,
+    fontFamily: 'System',
   },
-  errorText: {
-    color: 'white',
-    fontSize: 18,
-    marginTop: 16,
-    marginBottom: 24,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  retryButton: {
-    backgroundColor: '#FF5C39',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-  },
-  headerUser: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  userAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  userAvatarText: { color: '#FF5C39', fontWeight: '900', fontSize: 16 },
-  greetingText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginBottom: 4,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#1F1F1F',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Hero Banner
-  heroBanner: {
-    height: 180,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 20,
-    overflow: 'hidden',
+  heroContainer: {
+    height: height * 0.45,
     position: 'relative',
   },
   heroImage: {
     width: '100%',
     height: '100%',
+    position: 'absolute',
   },
   heroGradient: {
+    position: 'absolute',
     width: '100%',
     height: '100%',
-    backgroundColor: '#1F1F1F',
   },
-  heroOverlay: {
-    position: 'absolute',
-    inset: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: 20,
-    justifyContent: 'flex-end',
+  heroContent: {
+    flex: 1,
+    paddingTop: 60,
+    paddingHorizontal: 20,
   },
-  heroTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: 4,
-  },
-  heroSubtitle: {
-    fontSize: 15,
-    color: '#E5E7EB',
-    marginBottom: 16,
-  },
-  heroStats: {
+  userSection: {
     flexDirection: 'row',
-    gap: 16,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 40,
   },
-  heroStat: {
+  userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  heroStatText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-
-  // Quick Actions
-  quickActions: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 24,
     gap: 12,
   },
-  quickAction: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+  avatarContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
     justifyContent: 'center',
-    padding: 16,
+    alignItems: 'center',
+  },
+  avatarGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  avatarText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: 'System',
+  },
+  welcomeText: {
+    color: '#8E8E93',
+    fontSize: 14,
+    fontFamily: 'System',
+  },
+  userName: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: 'System',
+  },
+  notificationButton: {
+    padding: 8,
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: '#FF3B30',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'System',
+  },
+  heroTextContainer: {
+    marginBottom: 30,
+  },
+  heroTitle: {
+    color: 'white',
+    fontSize: 36,
+    fontWeight: '800',
+    fontFamily: 'System',
+    lineHeight: 40,
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    color: '#8E8E93',
+    fontSize: 16,
+    fontFamily: 'System',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 16,
-    gap: 10,
+    padding: 14,
+    alignItems: 'center',
   },
-  quickActionPrimary: {
-    backgroundColor: '#FF5C39',
-  },
-  quickActionSecondary: {
-    backgroundColor: '#1F1F1F',
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-  },
-  quickActionText: {
+  statNumber: {
     color: 'white',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
+    marginVertical: 4,
+    fontFamily: 'System',
   },
-  quickActionTextSecondary: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  quickActionSubtext: {
-    color: '#FF5C39',
+  statLabel: {
+    color: '#8E8E93',
     fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
+    fontFamily: 'System',
   },
-
-  // Search
-  searchSection: {
+  contentContainer: {
+    backgroundColor: '#000000',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -24,
+    paddingTop: 28,
     paddingHorizontal: 20,
-    marginBottom: 24,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1F1F1F',
-    borderRadius: 14,
+    backgroundColor: 'rgba(58,58,60,0.5)',
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    gap: 12,
     marginBottom: 12,
+  },
+  searchIcon: {
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
     color: 'white',
-    fontSize: 15,
+    fontSize: 16,
+    fontFamily: 'System',
+  },
+  clearButton: {
+    padding: 4,
   },
   cityFilters: {
-    gap: 8,
+    gap: 10,
+    paddingBottom: 12,
   },
   cityChip: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#1F1F1F',
+    borderRadius: 14,
+    backgroundColor: 'rgba(58,58,60,0.3)',
   },
   cityChipActive: {
-    backgroundColor: '#FF5C39',
+    backgroundColor: '#FF3B30',
   },
   cityChipText: {
-    color: '#9CA3AF',
-    fontSize: 14,
+    color: '#8E8E93',
+    fontSize: 13,
     fontWeight: '600',
+    fontFamily: 'System',
   },
   cityChipTextActive: {
     color: 'white',
   },
-
-  // Sections
+  quickActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  quickAction: {
+    flex: 1,
+    height: 80,
+    borderRadius: 16,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickActionGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  quickActionText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 8,
+    fontFamily: 'System',
+  },
+  bookingsInfo: {
+    alignItems: 'center',
+  },
+  bookingsCount: {
+    color: '#FF3B30',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+    fontFamily: 'System',
+  },
   section: {
     marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: 'white',
-    marginLeft: 20,
-    marginBottom: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
     marginBottom: 16,
   },
-  seeAllLink: {
-    color: '#FF5C39',
-    fontSize: 15,
+  sectionTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: 'System',
+  },
+  seeAllText: {
+    color: '#FF3B30',
+    fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'System',
   },
-
-  // Promotions
-  promotionsScroll: {
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  promoCard: {
-    width: width * 0.75,
-    backgroundColor: '#1F1F1F',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-  },
-  promoIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,92,57,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  promoTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 6,
-  },
-  promoSubtitle: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginBottom: 16,
-  },
-  promoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FF5C39',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    gap: 6,
-  },
-  promoButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  // Branch Cards
   branchList: {
-    paddingHorizontal: 20,
-    gap: CARD_SPACING,
+    gap: 16,
   },
   branchCard: {
     width: CARD_WIDTH,
-    backgroundColor: '#1F1F1F',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
+    height: 240,
+    borderRadius: 24,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#111',
   },
-  branchCardHeader: {
+  branchImage: {
+    width: '100%',
+    height: '100%',
+  },
+  branchGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  branchContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+  },
+  branchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  distanceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  distanceText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: 'System',
+  },
+  branchName: {
+    color: 'white',
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 8,
+    fontFamily: 'System',
+  },
+  branchDetails: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  detailText: {
+    color: '#8E8E93',
+    fontSize: 12,
+    fontFamily: 'System',
+  },
+  branchFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  branchIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,92,57,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cityBadge: {
-    backgroundColor: 'rgba(255,92,57,0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  cityBadgeText: {
-    color: '#FF5C39',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  branchName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 16,
-  },
-  branchInfo: {
-    gap: 10,
-    marginBottom: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  infoText: {
-    flex: 1,
-    color: '#D1D5DB',
-    fontSize: 14,
-  },
-  viewDetailsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FF5C39',
-    paddingVertical: 12,
+  bookButton: {
+    backgroundColor: '#FF3B30',
     paddingHorizontal: 20,
+    paddingVertical: 8,
     borderRadius: 12,
-    gap: 8,
   },
-  viewDetailsText: {
+  bookButtonText: {
     color: 'white',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
+    fontFamily: 'System',
   },
-
-  // Empty State
   emptyState: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 20,
+    paddingVertical: 60,
   },
-  emptyStateText: {
+  emptyStateTitle: {
     color: 'white',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     marginTop: 16,
+    marginBottom: 4,
+    fontFamily: 'System',
   },
-  emptyStateSubtext: {
-    color: '#6B7280',
+  emptyStateSubtitle: {
+    color: '#8E8E93',
     fontSize: 14,
-    marginTop: 6,
+    fontFamily: 'System',
   },
-
-  // Sessions
   sessionsList: {
-    paddingHorizontal: 20,
     gap: 12,
   },
-  sessionCard: {
+  sessionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1F1F1F',
+    backgroundColor: 'rgba(58,58,60,0.3)',
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
     gap: 12,
   },
-  sessionIcon: {
-    width: 44,
-    height: 44,
+  sessionIconContainer: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,92,57,0.1)',
+    backgroundColor: 'rgba(255,59,48,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  sessionInfo: {
+  sessionContent: {
     flex: 1,
   },
   sessionTitle: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: 4,
+    fontFamily: 'System',
   },
-  sessionMeta: {
-    color: '#9CA3AF',
+  sessionTime: {
+    color: '#8E8E93',
     fontSize: 13,
-    marginBottom: 2,
+    fontFamily: 'System',
   },
-  sessionLocation: {
-    color: '#6B7280',
-    fontSize: 12,
-  },
-
-  // Contact
-  contactCard: {
-    backgroundColor: '#1F1F1F',
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 20,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    gap: 16,
-  },
-  contactRow: {
+  sessionStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 6,
   },
-  contactIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,92,57,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#34C759',
   },
-  contactText: {
-    color: '#D1D5DB',
-    fontSize: 15,
-    flex: 1,
+  statusText: {
+    color: '#34C759',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'System',
   },
-
-  // Social
+  socialSection: {
+    marginBottom: 40,
+  },
   socialButtons: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
-    paddingHorizontal: 20,
+    gap: 16,
   },
   socialButton: {
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: '#1F1F1F',
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
   },
-
-  // Logout
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1F1F1F',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 14,
-    marginHorizontal: 20,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    gap: 10,
-  },
-  logoutText: {
-    color: '#EF4444',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  // Floating Action Buttons
-  fabContainer: {
+  socialButtonGradient: {
     position: 'absolute',
-    bottom: 24,
+    width: '100%',
+    height: '100%',
+  },
+  fabMenu: {
+    position: 'absolute',
+    bottom: 30,
     right: 20,
+    alignItems: 'flex-end',
     gap: 12,
   },
   fab: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#FF5C39',
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowRadius: 12,
+    elevation: 12,
   },
-
-  // Modal
+  fabGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+  },
+  modalBackground: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
     paddingTop: 60,
+    paddingHorizontal: 20,
     paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
     color: 'white',
+    fontSize: 28,
+    fontWeight: '800',
+    fontFamily: 'System',
   },
-  modalLoader: {
-    marginTop: 60,
+  modalBadgeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    marginTop: 6,
   },
-  bookingsList: {
+  modalBadge: {
+    backgroundColor: 'rgba(255,59,48,0.12)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+  },
+  modalBadgeLabel: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  modalBadgeValue: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  modalCloseButton: {
+    padding: 8,
+  },
+  modalContent: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
+  },
+  modalSection: {
+    marginBottom: 32,
   },
   modalSectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 10,
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+    fontFamily: 'System',
+  },
+  modalLoader: {
+    marginTop: 100,
   },
   bookingCard: {
-    backgroundColor: '#1F1F1F',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 20,
+    marginBottom: 14,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#1F1F2A',
   },
-  bookingHeader: {
+  bookingGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  bookingHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+  },
+  bookingLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  bookingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 8,
     gap: 12,
   },
-  bookingIconContainer: {
+  bookingIcon: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,92,57,0.1)',
+    backgroundColor: 'rgba(255,59,48,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  bookingContent: {
+  bookingDetails: {
     flex: 1,
   },
   bookingTitle: {
-    fontSize: 16,
-    fontWeight: '700',
     color: 'white',
+    fontSize: 18,
+    fontWeight: '700',
     marginBottom: 4,
+    fontFamily: 'System',
   },
-  bookingDate: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    marginBottom: 2,
+  bookingTime: {
+    color: '#8E8E93',
+    fontSize: 14,
+    marginBottom: 6,
+    fontFamily: 'System',
   },
-  bookingLocation: {
+  bookingLocationText: {
+    color: '#8E8E93',
     fontSize: 12,
-    color: '#6B7280',
+    fontFamily: 'System',
   },
-  modalEmptyState: {
+  bookingStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  bookingStatusText: {
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  statusDotSmall: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  modalEmpty: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
   },
-  modalEmptyText: {
-    fontSize: 20,
-    fontWeight: '700',
+  modalEmptyTitle: {
     color: 'white',
-    marginTop: 20,
-  },
-  modalEmptySubtext: {
-    fontSize: 15,
-    color: '#6B7280',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  modalCta: {
-    backgroundColor: '#FF5C39',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
+    fontSize: 24,
+    fontWeight: '700',
     marginTop: 24,
+    marginBottom: 8,
+    fontFamily: 'System',
   },
-  modalCtaText: {
+  modalEmptySubtitle: {
+    color: '#8E8E93',
+    fontSize: 16,
+    marginBottom: 32,
+    fontFamily: 'System',
+  },
+  modalButton: {
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+  },
+  modalButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '700',
+    fontFamily: 'System',
   },
 });
 
