@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FontAwesome, MaterialIcons, Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { t, supportedLanguages, defaultLang } from '../localization';
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.8;
@@ -43,6 +44,7 @@ const HomeScreen = ({ navigation }) => {
   const [loadingParams, setLoadingParams] = useState(true);
   const [cityFilter, setCityFilter] = useState('all');
   const [scrollY] = useState(new Animated.Value(0));
+  const [language, setLanguage] = useState(defaultLang);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -53,6 +55,26 @@ const HomeScreen = ({ navigation }) => {
   useEffect(() => {
     requestNotificationPermission();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem('app_language');
+        if (stored) setLanguage(stored);
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
+
+  const changeLanguage = async (code) => {
+    setLanguage(code);
+    try {
+      await AsyncStorage.setItem('app_language', code);
+    } catch (e) {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     const q = searchQuery.toLowerCase();
@@ -177,7 +199,7 @@ const HomeScreen = ({ navigation }) => {
     });
   };
 
-  const appName = parameters.app_name || 'ATHLETIC';
+  const appName = parameters.app_name || 'Anas Plus';
   const welcomeMessage = parameters.welcome_message || 'Elevate Your Training';
   const siteDescription = parameters.site_description || 'Premium Performance Hub';
   const openingHours = parameters.opening_hours || '06:00-22:00';
@@ -392,6 +414,20 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.heroSubtitle}>{siteDescription}</Text>
             </View>
 
+            <View style={styles.langSwitch}>
+              {supportedLanguages.map((lang) => (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={[styles.langChip, language === lang.code && styles.langChipActive]}
+                  onPress={() => changeLanguage(lang.code)}
+                >
+                  <Text style={[styles.langChipText, language === lang.code && styles.langChipTextActive]}>
+                    {lang.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <View style={styles.statsContainer}>
               <View style={styles.statCard}>
                 <Ionicons name="business-outline" size={20} color="#FF3B30" />
@@ -419,7 +455,7 @@ const HomeScreen = ({ navigation }) => {
             <Ionicons name="search" size={20} color="#8E8E93" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search gyms, locations..."
+              placeholder={t(language, 'searchPlaceholder')}
               placeholderTextColor="#8E8E93"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -441,7 +477,7 @@ const HomeScreen = ({ navigation }) => {
                   style={[styles.cityChip, cityFilter === c && styles.cityChipActive]}
                 >
                   <Text style={[styles.cityChipText, cityFilter === c && styles.cityChipTextActive]}>
-                    {c === 'all' ? 'All' : c.charAt(0).toUpperCase() + c.slice(1)}
+                    {c === 'all' ? t(language, 'allLabel') : c.charAt(0).toUpperCase() + c.slice(1)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -453,16 +489,16 @@ const HomeScreen = ({ navigation }) => {
             <TouchableOpacity style={styles.quickAction} onPress={() => navigation.navigate('BranchMap')}>
               <LinearGradient colors={['#FF3B30', '#FF9500']} style={styles.quickActionGradient} />
               <Ionicons name="map-outline" size={24} color="white" />
-              <Text style={styles.quickActionText}>Map</Text>
+              <Text style={styles.quickActionText}>{t(language, 'quickMap')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.quickAction} onPress={() => setShowBookingsModal(true)}>
               <LinearGradient colors={['#2A2A2A', '#1A1A1A']} style={styles.quickActionGradient} />
               <MaterialCommunityIcons name="calendar-check" size={24} color="#FF3B30" />
               <View style={styles.bookingsInfo}>
-                <Text style={styles.quickActionText}>Bookings</Text>
+                <Text style={styles.quickActionText}>{t(language, 'quickBookings')}</Text>
                 {upcomingCount > 0 && (
-                  <Text style={styles.bookingsCount}>{upcomingCount} active</Text>
+                  <Text style={styles.bookingsCount}>{t(language, 'activeCount', { count: upcomingCount })}</Text>
                 )}
               </View>
             </TouchableOpacity>
@@ -470,7 +506,7 @@ const HomeScreen = ({ navigation }) => {
             <TouchableOpacity style={styles.quickAction} onPress={() => navigation.navigate('WorkoutList')}>
               <LinearGradient colors={['#2A2A2A', '#1A1A1A']} style={styles.quickActionGradient} />
               <MaterialCommunityIcons name="run-fast" size={24} color="#FF3B30" />
-              <Text style={styles.quickActionText}>Workouts</Text>
+              <Text style={styles.quickActionText}>{t(language, 'quickWorkouts')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -478,10 +514,12 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
-                {searchQuery || cityFilter !== 'all' ? 'Results' : 'Our Locations'}
+                {searchQuery || cityFilter !== 'all'
+                  ? t(language, 'resultsTitle')
+                  : t(language, 'locationsTitle')}
               </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('BranchMap')}>
-                <Text style={styles.seeAllText}>View All</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('BranchMap')}>
+                <Text style={styles.seeAllText}>{t(language, 'viewAll')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -499,8 +537,8 @@ const HomeScreen = ({ navigation }) => {
             ) : (
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="map-marker-off" size={64} color="#3A3A3C" />
-                <Text style={styles.emptyStateTitle}>No locations found</Text>
-                <Text style={styles.emptyStateSubtitle}>Try adjusting your search</Text>
+                <Text style={styles.emptyStateTitle}>{t(language, 'noLocations')}</Text>
+                <Text style={styles.emptyStateSubtitle}>{t(language, 'adjustSearch')}</Text>
               </View>
             )}
           </View>
@@ -509,9 +547,9 @@ const HomeScreen = ({ navigation }) => {
           {upcomingSessions.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Upcoming Sessions</Text>
+                <Text style={styles.sectionTitle}>{t(language, 'upcomingSessions')}</Text>
                 <TouchableOpacity onPress={() => setShowBookingsModal(true)}>
-                  <Text style={styles.seeAllText}>See All</Text>
+                  <Text style={styles.seeAllText}>{t(language, 'seeAll')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -595,14 +633,14 @@ const HomeScreen = ({ navigation }) => {
 
           <View style={styles.modalHeader}>
             <View>
-              <Text style={styles.modalTitle}>My Bookings</Text>
+              <Text style={styles.modalTitle}>{t(language, 'bookingsModal')}</Text>
               <View style={styles.modalBadgeRow}>
                 <View style={styles.modalBadge}>
-                  <Text style={styles.modalBadgeLabel}>Upcoming</Text>
+                  <Text style={styles.modalBadgeLabel}>{t(language, 'upcoming')}</Text>
                   <Text style={styles.modalBadgeValue}>{bookingsGrouped.upcoming.length}</Text>
                 </View>
                 <View style={[styles.modalBadge, { backgroundColor: '#111118', borderColor: '#1F1F2A' }]}>
-                  <Text style={styles.modalBadgeLabel}>Past</Text>
+                  <Text style={styles.modalBadgeLabel}>{t(language, 'pastSessions')}</Text>
                   <Text style={styles.modalBadgeValue}>{bookingsGrouped.past.length}</Text>
                 </View>
               </View>
@@ -624,7 +662,7 @@ const HomeScreen = ({ navigation }) => {
             <ScrollView style={styles.modalContent}>
               {bookingsGrouped.upcoming.length > 0 && (
                 <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Upcoming</Text>
+                  <Text style={styles.modalSectionTitle}>{t(language, 'upcoming')}</Text>
                   {bookingsGrouped.upcoming.map((item) => (
                     <View key={`up-${item.id || item.session_date}`}>{renderBookingItem({ item })}</View>
                   ))}
@@ -633,7 +671,7 @@ const HomeScreen = ({ navigation }) => {
 
               {!showUpcomingOnly && bookingsGrouped.past.length > 0 && (
                 <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Past Sessions</Text>
+                  <Text style={styles.modalSectionTitle}>{t(language, 'pastSessions')}</Text>
                   {bookingsGrouped.past.map((item) => (
                     <View key={`past-${item.id || item.session_date}`}>{renderBookingItem({ item })}</View>
                   ))}
@@ -643,8 +681,8 @@ const HomeScreen = ({ navigation }) => {
           ) : (
             <View style={styles.modalEmpty}>
               <MaterialCommunityIcons name="calendar-blank" size={80} color="#3A3A3C" />
-              <Text style={styles.modalEmptyTitle}>No bookings yet</Text>
-              <Text style={styles.modalEmptySubtitle}>Start your fitness journey today</Text>
+              <Text style={styles.modalEmptyTitle}>{t(language, 'noBookings')}</Text>
+              <Text style={styles.modalEmptySubtitle}>{t(language, 'startJourney')}</Text>
               <TouchableOpacity
                 style={styles.modalButton}
                 onPress={() => {
@@ -652,7 +690,7 @@ const HomeScreen = ({ navigation }) => {
                   navigation.navigate('BranchMap');
                 }}
               >
-                <Text style={styles.modalButtonText}>Explore Locations</Text>
+                <Text style={styles.modalButtonText}>{t(language, 'exploreLocations')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -738,6 +776,33 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     fontFamily: 'System',
+  },
+  langSwitch: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    gap: 8,
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  langChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+    backgroundColor: 'rgba(30,30,30,0.9)',
+  },
+  langChipActive: {
+    borderColor: '#FF3B30',
+    backgroundColor: 'rgba(255,59,48,0.15)',
+  },
+  langChipText: {
+    color: '#9CA3AF',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  langChipTextActive: {
+    color: '#FFFFFF',
   },
   notificationButton: {
     padding: 8,

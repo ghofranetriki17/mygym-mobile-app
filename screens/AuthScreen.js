@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { authAPI, tokenService } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t, supportedLanguages, defaultLang } from '../localization';
 
 const AuthScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -10,6 +11,27 @@ const AuthScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [language, setLanguage] = useState(defaultLang);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem('app_language');
+        if (stored) setLanguage(stored);
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
+
+  const changeLanguage = async (code) => {
+    setLanguage(code);
+    try {
+      await AsyncStorage.setItem('app_language', code);
+    } catch (e) {
+      // ignore
+    }
+  };
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -90,10 +112,10 @@ const AuthScreen = ({ navigation }) => {
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
       let errorMessage = 'Password must contain:\n';
-      if (!passwordValidation.errors.minLength) errorMessage += '• At least 8 characters\n';
-      if (!passwordValidation.errors.hasNumber) errorMessage += '• At least one number\n';
-      if (!passwordValidation.errors.hasUpper) errorMessage += '• At least one uppercase letter\n';
-      if (!passwordValidation.errors.hasLower) errorMessage += '• At least one lowercase letter\n';
+      if (!passwordValidation.errors.minLength) errorMessage += '- At least 8 characters\n';
+      if (!passwordValidation.errors.hasNumber) errorMessage += '- At least one number\n';
+      if (!passwordValidation.errors.hasUpper) errorMessage += '- At least one uppercase letter\n';
+      if (!passwordValidation.errors.hasLower) errorMessage += '- At least one lowercase letter\n';
       
       Alert.alert('Error', errorMessage);
       return;
@@ -149,27 +171,41 @@ const AuthScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Anas Plus</Text>
+      <Text style={styles.title}>{t(language, 'authTitle')}</Text>
+
+      <View style={styles.langSwitch}>
+        {supportedLanguages.map((lang) => (
+          <TouchableOpacity
+            key={lang.code}
+            style={[styles.langChip, language === lang.code && styles.langChipActive]}
+            onPress={() => changeLanguage(lang.code)}
+          >
+            <Text style={[styles.langChipText, language === lang.code && styles.langChipTextActive]}>
+              {lang.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       
       <View style={styles.toggleContainer}>
         <TouchableOpacity 
           style={[styles.toggleButton, isLogin && styles.activeToggle]}
           onPress={() => setIsLogin(true)}
         >
-          <Text style={[styles.toggleText, isLogin && styles.activeToggleText]}>Login</Text>
+          <Text style={[styles.toggleText, isLogin && styles.activeToggleText]}>{t(language, 'login')}</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.toggleButton, !isLogin && styles.activeToggle]}
           onPress={() => setIsLogin(false)}
         >
-          <Text style={[styles.toggleText, !isLogin && styles.activeToggleText]}>Register</Text>
+          <Text style={[styles.toggleText, !isLogin && styles.activeToggleText]}>{t(language, 'register')}</Text>
         </TouchableOpacity>
       </View>
 
       {!isLogin && (
         <TextInput
           style={styles.input}
-          placeholder="Full Name"
+          placeholder={t(language, 'fullName')}
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
@@ -178,7 +214,7 @@ const AuthScreen = ({ navigation }) => {
       
       <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder={t(language, 'email')}
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
@@ -188,7 +224,7 @@ const AuthScreen = ({ navigation }) => {
       
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder={t(language, 'password')}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -199,14 +235,14 @@ const AuthScreen = ({ navigation }) => {
         <>
           <TextInput
             style={styles.input}
-            placeholder="Confirm Password"
+            placeholder={t(language, 'confirmPassword')}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
             autoComplete="password"
           />
           <Text style={styles.passwordHint}>
-            Password must be at least 8 characters with uppercase, lowercase, and number
+            {t(language, 'passwordHint')}
           </Text>
         </>
       )}
@@ -217,7 +253,7 @@ const AuthScreen = ({ navigation }) => {
         disabled={loading}
       >
         <Text style={styles.buttonText}>
-          {loading ? 'Loading...' : (isLogin ? 'Login' : 'Register')}
+          {loading ? t(language, 'loading') : (isLogin ? t(language, 'login') : t(language, 'register'))}
         </Text>
       </TouchableOpacity>
 
@@ -323,6 +359,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
     opacity: 0.8,
+  },
+  langSwitch: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  langChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+    backgroundColor: '#1E1E1E',
+  },
+  langChipActive: {
+    borderColor: '#FF3B30',
+    backgroundColor: 'rgba(255,59,48,0.15)',
+  },
+  langChipText: {
+    color: '#9CA3AF',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  langChipTextActive: {
+    color: '#FFFFFF',
   },
 });
 

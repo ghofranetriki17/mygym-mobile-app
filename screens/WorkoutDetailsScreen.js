@@ -10,14 +10,16 @@ import {
   TextInput,
 } from 'react-native';
 import { workoutAPI, exerciseAPI } from '../services/api';
+import { t } from '../localization';
+import { useLanguage } from './hooks/useLanguage';
 
-const getAchievementNote = (value) => {
-  if (value === 100) return 'Completed';
-  if (value >= 76) return 'Nearly complete';
-  if (value >= 51) return 'Almost done';
-  if (value >= 26) return 'Getting there';
-  if (value >= 1) return 'Just started';
-  return 'Not started';
+const getAchievementNote = (value, language) => {
+  if (value === 100) return t(language, 'achNoteCompleted');
+  if (value >= 76) return t(language, 'achNoteNearly');
+  if (value >= 51) return t(language, 'achNoteAlmost');
+  if (value >= 26) return t(language, 'achNoteGetting');
+  if (value >= 1) return t(language, 'achNoteStarted');
+  return t(language, 'achNoteNotStarted');
 };
 
 const WorkoutDetailsScreen = ({ route, navigation }) => {
@@ -26,6 +28,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
   const [orderEdits, setOrderEdits] = useState({});
   const [loading, setLoading] = useState(!initialWorkout);
   const [error, setError] = useState(null);
+  const { language } = useLanguage();
 
   useEffect(() => {
     const needFetch = !workout?.exercises && (workoutId || workout?.id);
@@ -38,7 +41,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
         setWorkout(data);
         setError(null);
       } catch (e) {
-        setError('Failed to load workout details');
+        setError(t(language, 'errorLoadWorkoutDetails'));
       } finally {
         setLoading(false);
       }
@@ -64,7 +67,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
       }));
     } catch (error) {
       console.error('Failed to update pivot:', error);
-      Alert.alert('Error', 'Failed to update exercise data.');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorUpdateExerciseData'));
     }
   };
 
@@ -74,7 +77,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
       await updateExercisePivot(exerciseId, { is_done: newStatus });
     } catch (error) {
       console.error('Failed to toggle done status:', error);
-      Alert.alert('Error', 'Could not update exercise status. Please try again.');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorToggleStatus'));
     }
   };
 
@@ -82,7 +85,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
     const newOrderStr = orderEdits[exerciseId];
     const newOrder = parseInt(newOrderStr, 10);
     if (Number.isNaN(newOrder)) {
-      Alert.alert('Invalid input', 'Please enter a valid number for order.');
+      Alert.alert(t(language, 'invalidInput'), t(language, 'enterValidOrder'));
       return;
     }
 
@@ -91,21 +94,21 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
 
     try {
       await updateExercisePivot(exerciseId, { order: newOrder });
-      Alert.alert('Success', 'Order updated!');
+      Alert.alert(t(language, 'successTitle'), t(language, 'orderUpdated'));
     } catch (error) {
       console.error('Failed to update order:', error);
-      Alert.alert('Error', 'Failed to update order. Please try again.');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorUpdateOrder'));
     }
   };
 
   const handleDeleteExercise = (exerciseId) => {
     Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to REMOVE this exercise from the workout AND DELETE it permanently?',
+      t(language, 'confirmDelete'),
+      t(language, 'confirmDeleteExercise'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t(language, 'cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t(language, 'delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -117,10 +120,10 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
                 exercises: prevWorkout.exercises.filter((ex) => ex.id !== exerciseId),
               }));
 
-              Alert.alert('Success', 'Exercise removed and deleted successfully.');
+              Alert.alert(t(language, 'successTitle'), t(language, 'exerciseRemoved'));
             } catch (error) {
               console.error('Failed to delete exercise:', error);
-              Alert.alert('Error', 'Failed to remove and delete exercise. Please try again.');
+              Alert.alert(t(language, 'errorTitle'), t(language, 'errorDeleteExercise'));
             }
           },
         },
@@ -143,13 +146,13 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
             style={[styles.doneToggle, isDone ? styles.doneToggleActive : styles.doneToggleInactive]}
             onPress={() => toggleDoneStatus(item.id, isDone)}
           >
-            <Text style={styles.doneToggleText}>{isDone ? 'Done' : 'Pending'}</Text>
+            <Text style={styles.doneToggleText}>{isDone ? t(language, 'done') : t(language, 'pending')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.detailsRow}>
           <View style={styles.detailChip}>
-            <Text style={styles.detailChipLabel}>Order</Text>
+            <Text style={styles.detailChipLabel}>{t(language, 'orderLabel')}</Text>
             <TextInput
               style={styles.orderInput}
               keyboardType="numeric"
@@ -170,7 +173,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
           </View>
 
           <View style={styles.detailChip}>
-            <Text style={styles.detailChipLabel}>Sets x Reps</Text>
+            <Text style={styles.detailChipLabel}>{t(language, 'setsReps')}</Text>
             <Text style={styles.detailChipValue}>
               {item.sets} x {item.reps}
             </Text>
@@ -179,7 +182,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
 
         <View style={styles.detailsRow}>
           <View style={styles.detailChip}>
-            <Text style={styles.detailChipLabel}>Achievement</Text>
+            <Text style={styles.detailChipLabel}>{t(language, 'achievement')}</Text>
             <View style={styles.achievementInputRow}>
               <TextInput
                 style={styles.achievementInput}
@@ -190,24 +193,24 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
                   if (!Number.isNaN(val) && val >= 0 && val <= 100) {
                     updateExercisePivot(item.id, { achievement: val });
                   } else {
-                    Alert.alert('Invalid', 'Achievement must be between 0 and 100');
+                    Alert.alert(t(language, 'invalidInput'), t(language, 'achievementRange'));
                   }
                 }}
               />
               <Text style={styles.achievementPercent}>%</Text>
             </View>
             {typeof item.pivot?.achievement === 'number' && (
-              <Text style={styles.achievementNote}>{getAchievementNote(item.pivot.achievement)}</Text>
+              <Text style={styles.achievementNote}>{getAchievementNote(item.pivot.achievement, language)}</Text>
             )}
           </View>
 
           {item.pivot?.is_done ? (
             <View style={[styles.statusPill, styles.statusPillDone]}>
-              <Text style={styles.statusPillText}>Completed</Text>
+              <Text style={styles.statusPillText}>{t(language, 'completed')}</Text>
             </View>
           ) : (
             <View style={[styles.statusPill, styles.statusPillPending]}>
-              <Text style={styles.statusPillText}>In progress</Text>
+              <Text style={styles.statusPillText}>{t(language, 'inProgress')}</Text>
             </View>
           )}
         </View>
@@ -217,7 +220,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
             style={styles.relatedItem}
             onPress={() => navigation.navigate('MovementDetails', { movement: item.movement })}
           >
-            <Text style={styles.relatedLabel}>Movement</Text>
+            <Text style={styles.relatedLabel}>{t(language, 'movement')}</Text>
             <Text style={styles.relatedValue}>{item.movement.name} {'>'}</Text>
           </TouchableOpacity>
         )}
@@ -227,7 +230,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
             style={styles.relatedItem}
             onPress={() => navigation.navigate('MachineDetails', { machine: item.machine })}
           >
-            <Text style={styles.relatedLabel}>Machine</Text>
+            <Text style={styles.relatedLabel}>{t(language, 'machine')}</Text>
             <Text style={styles.relatedValue}>{item.machine.name} {'>'}</Text>
           </TouchableOpacity>
         )}
@@ -237,13 +240,13 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
             style={styles.relatedItem}
             onPress={() => navigation.navigate('ChargeDetails', { charge: item.charge })}
           >
-            <Text style={styles.relatedLabel}>Charge</Text>
+            <Text style={styles.relatedLabel}>{t(language, 'charge')}</Text>
             <Text style={styles.relatedValue}>{item.charge.name || item.charge.weight}</Text>
           </TouchableOpacity>
         )}
 
         <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteExercise(item.id)}>
-          <Text style={styles.deleteButtonText}>Delete Exercise</Text>
+          <Text style={styles.deleteButtonText}>{t(language, 'deleteExercise')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -253,26 +256,28 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.heroCard}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.header}>Workout: {workout.title}</Text>
-          <Text style={styles.notes}>{workout.notes || 'No notes'}</Text>
+          <Text style={styles.header}>{t(language, 'workoutTitleLabel', { title: workout.title })}</Text>
+          <Text style={styles.notes}>{workout.notes || t(language, 'noNotes')}</Text>
           <View style={styles.heroBadges}>
             <View style={styles.badge}>
-              <Text style={styles.badgeLabel}>Duration</Text>
+              <Text style={styles.badgeLabel}>{t(language, 'duration')}</Text>
               <Text style={styles.badgeValue}>{workout.duration || 0} min</Text>
             </View>
             <View style={styles.badge}>
-              <Text style={styles.badgeLabel}>Water</Text>
+              <Text style={styles.badgeLabel}>{t(language, 'water')}</Text>
               <Text style={styles.badgeValue}>{workout.water_consumption || 0} L</Text>
             </View>
             <View style={styles.badge}>
-              <Text style={styles.badgeLabel}>Type</Text>
-              <Text style={styles.badgeValue}>{workout.is_rest_day ? 'Rest day' : 'Workout'}</Text>
+              <Text style={styles.badgeLabel}>{t(language, 'type')}</Text>
+              <Text style={styles.badgeValue}>
+                {workout.is_rest_day ? t(language, 'restDay') : t(language, 'workoutDay')}
+              </Text>
             </View>
           </View>
         </View>
         <View style={styles.progressRing}>
           <Text style={styles.progressValue}>{completionRate}%</Text>
-          <Text style={styles.progressLabel}>Done</Text>
+          <Text style={styles.progressLabel}>{t(language, 'done')}</Text>
         </View>
       </View>
 
@@ -280,7 +285,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
         data={workout.exercises || []}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderExercise}
-        ListEmptyComponent={<Text style={styles.emptyText}>No exercises found.</Text>}
+        ListEmptyComponent={<Text style={styles.emptyText}>{t(language, 'noExercisesFound')}</Text>}
         scrollEnabled={false}
       />
     </ScrollView>

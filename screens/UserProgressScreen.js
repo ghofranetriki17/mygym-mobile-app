@@ -18,6 +18,8 @@ import { Dimensions } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
+import { t, supportedLanguages } from '../localization';
+import { useLanguage } from './hooks/useLanguage';
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -35,6 +37,7 @@ const UserProgressScreen = () => {
   const [muscleMass, setMuscleMass] = useState('');
   const [recordedAt, setRecordedAt] = useState('');
   const [userName, setUserName] = useState('');
+  const { language, changeLanguage } = useLanguage();
 
   const latest = useMemo(() => (progresses.length ? progresses[progresses.length - 1] : null), [progresses]);
 
@@ -45,11 +48,11 @@ const UserProgressScreen = () => {
   const loadUserData = async () => {
     try {
       const storedUserName = await AsyncStorage.getItem('userName');
-      setUserName(storedUserName || 'User');
+      setUserName(storedUserName || t(language, 'userDefault'));
       fetchProgresses();
     } catch (error) {
       console.error('Error loading user data:', error);
-      Alert.alert('Error', 'Failed to load user data');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorLoadUserData'));
     } finally {
       setLoading(false);
     }
@@ -63,10 +66,10 @@ const UserProgressScreen = () => {
     } catch (error) {
       console.error('Error fetching progress:', error);
       if (error.response?.status === 401) {
-        Alert.alert('Session Expired', 'Please log in again');
+        Alert.alert(t(language, 'sessionExpired'), t(language, 'pleaseLoginAgain'));
       } else {
-        const errorMessage = error.response?.data?.message || 'Failed to load progress data';
-        Alert.alert('Error', errorMessage);
+        const errorMessage = error.response?.data?.message || t(language, 'errorLoadProgress');
+        Alert.alert(t(language, 'errorTitle'), errorMessage);
       }
     } finally {
       setLoading(false);
@@ -75,21 +78,21 @@ const UserProgressScreen = () => {
 
   const deleteProgress = async (id) => {
     Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this entry?',
+      t(language, 'confirmDelete'),
+      t(language, 'confirmDeleteProgress'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t(language, 'cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t(language, 'delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await userProgressAPI.delete(id);
-              Alert.alert('Deleted', 'Progress entry deleted successfully');
+              Alert.alert(t(language, 'deletedTitle'), t(language, 'progressDeleted'));
               fetchProgresses();
             } catch (error) {
               console.error('Error deleting progress:', error);
-              Alert.alert('Error', 'Failed to delete progress');
+              Alert.alert(t(language, 'errorTitle'), t(language, 'errorDeleteProgress'));
             }
           },
         },
@@ -99,38 +102,38 @@ const UserProgressScreen = () => {
 
   const addProgress = async () => {
     if (!recordedAt) {
-      Alert.alert('Validation', 'Date is required');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'dateRequired'));
       return;
     }
 
     if (!weight && !height && !bodyFat && !muscleMass) {
-      Alert.alert('Validation', 'Please provide at least one measurement');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'oneMeasurement'));
       return;
     }
 
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(recordedAt)) {
-      Alert.alert('Validation', 'Please enter date in YYYY-MM-DD format');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'dateFormat'));
       return;
     }
 
     if (weight && (isNaN(parseFloat(weight)) || parseFloat(weight) <= 0)) {
-      Alert.alert('Validation', 'Please enter a valid weight');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'validWeight'));
       return;
     }
 
     if (height && (isNaN(parseFloat(height)) || parseFloat(height) <= 0)) {
-      Alert.alert('Validation', 'Please enter a valid height');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'validHeight'));
       return;
     }
 
     if (bodyFat && (isNaN(parseFloat(bodyFat)) || parseFloat(bodyFat) < 0 || parseFloat(bodyFat) > 100)) {
-      Alert.alert('Validation', 'Body fat percentage must be between 0 and 100');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'bodyFatRange'));
       return;
     }
 
     if (muscleMass && (isNaN(parseFloat(muscleMass)) || parseFloat(muscleMass) < 0 || parseFloat(muscleMass) > 100)) {
-      Alert.alert('Validation', 'Muscle mass percentage must be between 0 and 100');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'muscleMassRange'));
       return;
     }
 
@@ -142,7 +145,7 @@ const UserProgressScreen = () => {
       if (muscleMass) progressData.muscle_mass = parseFloat(muscleMass);
 
       await userProgressAPI.create(progressData);
-      Alert.alert('Success', 'Progress added successfully');
+      Alert.alert(t(language, 'successTitle'), t(language, 'progressAdded'));
       fetchProgresses();
 
       setWeight('');
@@ -152,14 +155,14 @@ const UserProgressScreen = () => {
       setRecordedAt('');
     } catch (error) {
       console.error('Error adding progress:', error);
-      let errorMessage = 'Failed to save progress';
+      let errorMessage = t(language, 'errorSaveProgress');
       if (error.response?.data?.details) {
         const details = error.response.data.details;
         errorMessage = Object.values(details).flat().join('\n');
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      Alert.alert('Error', errorMessage);
+      Alert.alert(t(language, 'errorTitle'), errorMessage);
     }
   };
 
@@ -227,7 +230,7 @@ const UserProgressScreen = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#FF3B30" />
-        <Text style={styles.loadingText}>Loading progress...</Text>
+        <Text style={styles.loadingText}>{t(language, 'loadingProgress')}</Text>
       </View>
     );
   }
@@ -236,20 +239,35 @@ const UserProgressScreen = () => {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <LinearGradient colors={['#FF3B30', '#0B0B0F']} style={styles.heroCard}>
-          <Text style={styles.heroKicker}>Progress Tracker</Text>
-          <Text style={styles.heroTitle}>{userName}'s progress</Text>
-          <Text style={styles.heroSubtitle}>Suivez poids, masse musculaire et body fat</Text>
+          <Text style={styles.heroKicker}>{t(language, 'progressTracker')}</Text>
+          <Text style={styles.heroTitle}>{t(language, 'progressFor', { name: userName })}</Text>
+          <Text style={styles.heroSubtitle}>{t(language, 'progressSubtitle')}</Text>
+          <View style={styles.langSwitch}>
+            {supportedLanguages.map((lang) => (
+              <TouchableOpacity
+                key={lang.code}
+                style={[styles.langChip, language === lang.code && styles.langChipActive]}
+                onPress={() => changeLanguage(lang.code)}
+              >
+                <Text style={[styles.langChipText, language === lang.code && styles.langChipTextActive]}>
+                  {lang.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           <View style={styles.heroBadges}>
             <View style={styles.heroBadge}>
               <Icon name="calendar" size={14} color="#0B0B0F" />
               <Text style={styles.heroBadgeText}>
-                {progresses.length ? `${progresses.length} entr${progresses.length > 1 ? 'ies' : 'y'}` : 'No entries'}
+                {progresses.length
+                  ? t(language, 'entriesCount', { count: progresses.length })
+                  : t(language, 'noEntries')}
               </Text>
             </View>
             <View style={[styles.heroBadge, { backgroundColor: 'rgba(11,11,15,0.2)', borderColor: '#0B0B0F' }]}>
               <Icon name="clock-o" size={14} color="#0B0B0F" />
               <Text style={[styles.heroBadgeText, { color: '#0B0B0F' }]}>
-                {latest ? new Date(latest.recorded_at).toLocaleDateString() : 'No recent data'}
+                {latest ? new Date(latest.recorded_at).toLocaleDateString() : t(language, 'noRecentData')}
               </Text>
             </View>
           </View>
@@ -258,24 +276,24 @@ const UserProgressScreen = () => {
         <View style={styles.cardsRow}>
           <View style={styles.statCard}>
             <Icon name="balance-scale" size={20} color="#FF3B30" />
-            <Text style={styles.statLabelSmall}>Weight</Text>
+            <Text style={styles.statLabelSmall}>{t(language, 'weight')}</Text>
             <Text style={styles.statValue}>{latest?.weight ? `${latest.weight} kg` : '--'}</Text>
           </View>
           <View style={styles.statCard}>
             <Icon name="heartbeat" size={20} color="#FF3B30" />
-            <Text style={styles.statLabelSmall}>Body fat</Text>
+            <Text style={styles.statLabelSmall}>{t(language, 'bodyFat')}</Text>
             <Text style={styles.statValue}>{latest?.body_fat ? `${latest.body_fat}%` : '--'}</Text>
           </View>
           <View style={styles.statCard}>
             <Icon name="line-chart" size={20} color="#FF3B30" />
-            <Text style={styles.statLabelSmall}>BMI</Text>
+            <Text style={styles.statLabelSmall}>{t(language, 'bmi')}</Text>
             <Text style={styles.statValue}>{latest ? formatImc(latest.imc) : '--'}</Text>
           </View>
         </View>
 
         {chartData && (
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Tendances récentes</Text>
+            <Text style={styles.sectionTitle}>{t(language, 'recentTrends')}</Text>
             <LineChart
               data={chartData}
               width={screenWidth * 0.9}
@@ -298,19 +316,19 @@ const UserProgressScreen = () => {
               bezier
             />
             <View style={styles.legendContainer}>
-              <Text style={[styles.legendText, { color: 'rgba(0, 123, 255, 1)' }]}>Weight</Text>
-              <Text style={[styles.legendText, { color: 'rgba(255, 99, 132, 1)' }]}>Height</Text>
-              <Text style={[styles.legendText, { color: 'rgba(75, 192, 192, 1)' }]}>Muscle</Text>
-              <Text style={[styles.legendText, { color: 'rgba(255, 206, 86, 1)' }]}>Body fat</Text>
+              <Text style={[styles.legendText, { color: 'rgba(0, 123, 255, 1)' }]}>{t(language, 'weight')}</Text>
+              <Text style={[styles.legendText, { color: 'rgba(255, 99, 132, 1)' }]}>{t(language, 'height')}</Text>
+              <Text style={[styles.legendText, { color: 'rgba(75, 192, 192, 1)' }]}>{t(language, 'muscle')}</Text>
+              <Text style={[styles.legendText, { color: 'rgba(255, 206, 86, 1)' }]}>{t(language, 'bodyFat')}</Text>
             </View>
           </View>
         )}
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Add new progress</Text>
-          <Text style={styles.sectionHint}>Enregistrez vos mesures pour suivre vos progrès.</Text>
+          <Text style={styles.sectionTitle}>{t(language, 'addProgress')}</Text>
+          <Text style={styles.sectionHint}>{t(language, 'addProgressHint')}</Text>
           <TextInput
-            placeholder="Weight (kg) - optional"
+            placeholder={t(language, 'weightPlaceholder')}
             keyboardType="numeric"
             value={weight}
             onChangeText={setWeight}
@@ -318,7 +336,7 @@ const UserProgressScreen = () => {
             placeholderTextColor="#8E8E93"
           />
           <TextInput
-            placeholder="Height (cm) - optional"
+            placeholder={t(language, 'heightPlaceholder')}
             keyboardType="numeric"
             value={height}
             onChangeText={setHeight}
@@ -326,7 +344,7 @@ const UserProgressScreen = () => {
             placeholderTextColor="#8E8E93"
           />
           <TextInput
-            placeholder="Body Fat % - optional"
+            placeholder={t(language, 'bodyFatPlaceholder')}
             keyboardType="numeric"
             value={bodyFat}
             onChangeText={setBodyFat}
@@ -334,7 +352,7 @@ const UserProgressScreen = () => {
             placeholderTextColor="#8E8E93"
           />
           <TextInput
-            placeholder="Muscle Mass % - optional"
+            placeholder={t(language, 'musclePlaceholder')}
             keyboardType="numeric"
             value={muscleMass}
             onChangeText={setMuscleMass}
@@ -343,25 +361,25 @@ const UserProgressScreen = () => {
           />
           <View style={styles.dateRow}>
             <TextInput
-              placeholder="Recorded Date (YYYY-MM-DD) - required"
+              placeholder={t(language, 'datePlaceholder')}
               value={recordedAt}
               onChangeText={setRecordedAt}
               style={[styles.input, { flex: 1, marginBottom: 0 }]}
               placeholderTextColor="#8E8E93"
             />
             <TouchableOpacity style={styles.secondaryButton} onPress={setTodaysDate}>
-              <Text style={styles.secondaryButtonText}>Today</Text>
+              <Text style={styles.secondaryButtonText}>{t(language, 'today')}</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.primaryButton} onPress={addProgress}>
-            <Text style={styles.primaryButtonText}>Save progress</Text>
+            <Text style={styles.primaryButtonText}>{t(language, 'saveProgress')}</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.sectionTitle, { marginTop: 12 }]}>History</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 12 }]}>{t(language, 'history')}</Text>
         {progresses.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No progress data yet. Add your first entry above!</Text>
+            <Text style={styles.emptyText}>{t(language, 'noProgressYet')}</Text>
           </View>
         ) : (
           progresses
@@ -373,34 +391,34 @@ const UserProgressScreen = () => {
                   <Text style={styles.dateText}>{new Date(item.recorded_at).toLocaleDateString()}</Text>
                   <TouchableOpacity onPress={() => deleteProgress(item.id)} style={styles.deleteButton}>
                     <Icon name="trash" size={14} color="#FF3B30" />
-                    <Text style={styles.deleteButtonText}>Delete</Text>
+                    <Text style={styles.deleteButtonText}>{t(language, 'delete')}</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={styles.metricsContainer}>
                   <View style={styles.metricBox}>
                     <Icon name="balance-scale" size={18} color="#FF6F61" />
                     <Text style={styles.metricValue}>{item.weight ? `${item.weight} kg` : '-'}</Text>
-                    <Text style={styles.metricLabel}>Weight</Text>
+                    <Text style={styles.metricLabel}>{t(language, 'weight')}</Text>
                   </View>
                   <View style={styles.metricBox}>
                     <Icon name="arrows-v" size={18} color="#FF6F61" />
                     <Text style={styles.metricValue}>{item.height ? `${item.height} cm` : '-'}</Text>
-                    <Text style={styles.metricLabel}>Height</Text>
+                    <Text style={styles.metricLabel}>{t(language, 'height')}</Text>
                   </View>
                   <View style={styles.metricBox}>
                     <Icon name="tint" size={18} color="#FF6F61" />
                     <Text style={styles.metricValue}>{item.body_fat ? `${item.body_fat}%` : '-'}</Text>
-                    <Text style={styles.metricLabel}>Body Fat</Text>
+                    <Text style={styles.metricLabel}>{t(language, 'bodyFat')}</Text>
                   </View>
                   <View style={styles.metricBox}>
                     <Icon name="heartbeat" size={18} color="#FF6F61" />
                     <Text style={styles.metricValue}>{item.muscle_mass ? `${item.muscle_mass}%` : '-'}</Text>
-                    <Text style={styles.metricLabel}>Muscle</Text>
+                    <Text style={styles.metricLabel}>{t(language, 'muscle')}</Text>
                   </View>
                   <View style={styles.metricBox}>
                     <Icon name="line-chart" size={18} color="#FFD700" />
                     <Text style={styles.metricValue}>{formatImc(item.imc)}</Text>
-                    <Text style={styles.metricLabel}>BMI</Text>
+                    <Text style={styles.metricLabel}>{t(language, 'bmi')}</Text>
                   </View>
                 </View>
               </View>
@@ -516,6 +534,32 @@ const styles = StyleSheet.create({
   legendText: {
     fontWeight: '700',
     fontSize: 12,
+    color: '#FFFFFF',
+  },
+  langSwitch: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    gap: 8,
+    marginBottom: 6,
+  },
+  langChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+    backgroundColor: 'rgba(30,30,30,0.9)',
+  },
+  langChipActive: {
+    borderColor: '#FF3B30',
+    backgroundColor: 'rgba(255,59,48,0.2)',
+  },
+  langChipText: {
+    color: '#9CA3AF',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  langChipTextActive: {
     color: '#FFFFFF',
   },
   input: {

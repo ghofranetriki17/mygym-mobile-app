@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { programmeAPI, workoutAPI } from '../services/api';
 import Icon from 'react-native-vector-icons/FontAwesome5';
+import { t } from '../localization';
+import { useLanguage } from './hooks/useLanguage';
 
 const days = [
   { value: 1, label: 'Mon' },
@@ -38,6 +40,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
   const [selectedWeek, setSelectedWeek] = useState(null);
   const [removingWorkoutId, setRemovingWorkoutId] = useState(null);
   const [deletingProgramme, setDeletingProgramme] = useState(false);
+  const { language } = useLanguage();
 
   useEffect(() => {
     hydrateWorkouts(initialProgramme, workoutsSource);
@@ -89,7 +92,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
       const data = await programmeAPI.getById(id);
       setProgramme(data);
     } catch {
-      setError('Failed to load programme');
+      setError(t(language, 'errorLoadProgramme'));
     } finally {
       setLoading(false);
     }
@@ -121,6 +124,17 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
     }
   }, [groupedWorkouts, selectedWeek]);
 
+  const dayLabels = {
+    1: t(language, 'dayMon'),
+    2: t(language, 'dayTue'),
+    3: t(language, 'dayWed'),
+    4: t(language, 'dayThu'),
+    5: t(language, 'dayFri'),
+    6: t(language, 'daySat'),
+    7: t(language, 'daySun'),
+    0: t(language, 'unscheduled'),
+  };
+
   const handleOpenWorkout = async (item) => {
     const id = item?.id;
     if (!id) return;
@@ -135,7 +149,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
       const full = await workoutAPI.getById(id);
       navigation.navigate('WorkoutDetails', { workout: full, workoutId: id });
     } catch (e) {
-      Alert.alert('Access', 'Unable to load full workout details, showing basic info.');
+      Alert.alert(t(language, 'accessTitle'), t(language, 'workoutFallback'));
       navigation.navigate('WorkoutDetails', { workout: item, workoutId: id });
     } finally {
       setOpeningWorkoutId(null);
@@ -167,7 +181,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
       }));
 
     if (selections.length === 0) {
-      Alert.alert('Validation', 'Please select at least one workout');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'selectWorkoutPlease'));
       return;
     }
 
@@ -188,7 +202,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
       setNewEntries([]);
       setAddModalVisible(false);
     } catch (e) {
-      Alert.alert('Error', 'Failed to update programme workouts');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorUpdateProgrammeWorkouts'));
     } finally {
       setSavingAdd(false);
     }
@@ -196,10 +210,10 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
 
   const handleRemoveWorkout = (workoutId) => {
     if (!programme?.id) return;
-    Alert.alert('Remove workout', 'Remove this workout from the programme?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t(language, 'removeWorkoutTitle'), t(language, 'removeWorkoutConfirm'), [
+      { text: t(language, 'cancel'), style: 'cancel' },
       {
-        text: 'Remove',
+        text: t(language, 'remove'),
         style: 'destructive',
         onPress: async () => {
           const current = [...(programme.workouts || [])];
@@ -220,7 +234,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
             setProgramme(updated);
             hydrateWorkouts(updated, availableWorkouts);
           } catch (e) {
-            Alert.alert('Error', 'Failed to remove workout from programme');
+            Alert.alert(t(language, 'errorTitle'), t(language, 'errorRemoveWorkout'));
           } finally {
             setRemovingWorkoutId(null);
           }
@@ -231,10 +245,10 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
 
   const handleDeleteProgramme = () => {
     if (!programme?.id) return;
-    Alert.alert('Delete programme', 'This will remove the programme permanently. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t(language, 'deleteProgramme'), t(language, 'deleteProgrammeConfirm'), [
+      { text: t(language, 'cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t(language, 'delete'),
         style: 'destructive',
         onPress: async () => {
           setDeletingProgramme(true);
@@ -242,7 +256,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
             await programmeAPI.delete(programme.id);
             navigation.goBack();
           } catch (e) {
-            Alert.alert('Error', 'Failed to delete programme');
+            Alert.alert(t(language, 'errorTitle'), t(language, 'errorDeleteProgramme'));
           } finally {
             setDeletingProgramme(false);
           }
@@ -262,10 +276,12 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
         activeOpacity={0.85}
       >
         <View style={styles.workoutHeader}>
-          <Text style={styles.workoutTitle}>{item.title || `Workout ${item.id}`}</Text>
+          <Text style={styles.workoutTitle}>{item.title || t(language, 'workoutPlaceholder', { id: item.id })}</Text>
         </View>
         <Text style={styles.workoutMeta}>
-          {item.exercises ? `${item.exercises.length} exercises` : 'Exercises not loaded'}
+          {item.exercises
+            ? t(language, 'exercisesCount', { count: item.exercises.length })
+            : t(language, 'exercisesNotLoaded')}
         </Text>
         <TouchableOpacity
           style={styles.removeRow}
@@ -305,7 +321,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
   if (!programme) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Programme not found</Text>
+        <Text style={styles.errorText}>{t(language, 'programmeNotFound')}</Text>
       </View>
     );
   }
@@ -313,21 +329,25 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
       <View style={styles.heroCard}>
-        <Text style={styles.heroKicker}>Programme</Text>
+        <Text style={styles.heroKicker}>{t(language, 'programmeLabel')}</Text>
         <Text style={styles.title}>{programme.title}</Text>
-        <Text style={styles.objective}>{programme.objectif || 'No objective provided'}</Text>
+        <Text style={styles.objective}>{programme.objectif || t(language, 'noObjectiveProvided')}</Text>
         {programme.description ? <Text style={styles.description}>{programme.description}</Text> : null}
 
         <View style={styles.metaRow}>
           {programme.duration_weeks ? (
             <View style={styles.metaPill}>
               <Icon name="clock" size={12} color="#FF3B30" />
-              <Text style={styles.metaPillText}>{programme.duration_weeks} weeks</Text>
+              <Text style={styles.metaPillText}>
+                {t(language, 'durationWeeksShort', { count: programme.duration_weeks })}
+              </Text>
             </View>
           ) : null}
           <View style={styles.metaPill}>
             <Icon name="dumbbell" size={12} color="#FF3B30" />
-            <Text style={styles.metaPillText}>{programme.workouts?.length || 0} workouts</Text>
+            <Text style={styles.metaPillText}>
+              {t(language, 'workoutsCount', { count: programme.workouts?.length || 0 })}
+            </Text>
           </View>
         </View>
 
@@ -341,14 +361,14 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
             activeOpacity={0.85}
           >
             <Icon name="plus" size={14} color="#0B0B0F" />
-            <Text style={styles.primaryButtonText}>Add workouts</Text>
+            <Text style={styles.primaryButtonText}>{t(language, 'addWorkoutsCTA')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => navigation.navigate('Programmes')}
             activeOpacity={0.85}
           >
-            <Text style={styles.secondaryButtonText}>Back to list</Text>
+            <Text style={styles.secondaryButtonText}>{t(language, 'backToList')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -356,12 +376,12 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
       <View style={styles.sectionHeader}>
         <Icon name="dumbbell" size={16} color="#FF3B30" />
         <Text style={styles.sectionTitle}>
-          Workouts by week/day ({programme.workouts?.length || 0})
+          {t(language, 'workoutsByWeekDay', { count: programme.workouts?.length || 0 })}
         </Text>
       </View>
 
       {Object.keys(groupedWorkouts).length === 0 ? (
-        <Text style={styles.emptyText}>No workouts attached to this programme</Text>
+        <Text style={styles.emptyText}>{t(language, 'noWorkoutsAttached')}</Text>
       ) : (
         <>
           <ScrollView
@@ -382,7 +402,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
                     onPress={() => setSelectedWeek(week)}
                   >
                     <Text style={[styles.weekTabText, active && styles.weekTabTextActive]}>
-                      Week {week}
+                      {t(language, 'weekLabel', { num: week })}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -391,21 +411,21 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
 
           {selectedWeek !== null && (
             <View style={styles.weekContainer}>
-              <Text style={styles.weekTitle}>Week {selectedWeek}</Text>
+              <Text style={styles.weekTitle}>{t(language, 'weekLabel', { num: selectedWeek })}</Text>
               <View style={styles.calendarContainer}>
                 {days.map((d) => (
                   <View key={d.value} style={styles.dayColumn}>
-                    <Text style={styles.dayLabel}>{d.label}</Text>
+                    <Text style={styles.dayLabel}>{dayLabels[d.value]}</Text>
                     {groupedWorkouts[selectedWeek]?.[d.value]?.length ? (
                       groupedWorkouts[selectedWeek][d.value].map(renderWorkoutCard)
                     ) : (
-                      <Text style={styles.emptyDayText}>No workout</Text>
+                      <Text style={styles.emptyDayText}>{t(language, 'noWorkout')}</Text>
                     )}
                   </View>
                 ))}
                 {groupedWorkouts[selectedWeek]?.[0]?.length ? (
                   <View style={styles.dayColumn}>
-                    <Text style={styles.dayLabel}>Unscheduled</Text>
+                    <Text style={styles.dayLabel}>{t(language, 'unscheduled')}</Text>
                     {groupedWorkouts[selectedWeek][0].map(renderWorkoutCard)}
                   </View>
                 ) : null}
@@ -423,7 +443,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Add workouts to programme</Text>
+            <Text style={styles.modalTitle}>{t(language, 'addWorkoutsTitle')}</Text>
             {loadingAvailable ? (
               <ActivityIndicator color="#FF3B30" style={{ marginVertical: 10 }} />
             ) : (
@@ -431,9 +451,9 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
                 {newEntries.map((entry, idx) => (
                   <View key={idx} style={styles.entryContainer}>
                     <View style={styles.entryHeader}>
-                      <Text style={styles.label}>Workout #{idx + 1}</Text>
+                      <Text style={styles.label}>{t(language, 'workoutNumber', { num: idx + 1 })}</Text>
                       <TouchableOpacity onPress={() => removeEntry(idx)}>
-                        <Text style={styles.removeText}>Remove</Text>
+                        <Text style={styles.removeText}>{t(language, 'remove')}</Text>
                       </TouchableOpacity>
                     </View>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
@@ -446,20 +466,20 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
                             onPress={() => updateEntry(idx, 'workoutId', w.id)}
                           >
                             <Text
-                              style={[
-                                styles.workoutChipText,
-                                selected && styles.workoutChipTextSelected,
-                              ]}
-                            >
-                              {w.title || `Workout ${w.id}`}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
+                            style={[
+                              styles.workoutChipText,
+                              selected && styles.workoutChipTextSelected,
+                            ]}
+                          >
+                              {w.title || t(language, 'workoutPlaceholder', { id: w.id })}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                     </ScrollView>
                     <View style={styles.entryRow}>
                       <View style={{ flex: 1, marginRight: 8 }}>
-                        <Text style={styles.label}>Week (order)</Text>
+                        <Text style={styles.label}>{t(language, 'weekOrderLabel')}</Text>
                         <TextInput
                           style={styles.input}
                           placeholder="e.g. 1"
@@ -470,7 +490,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
                         />
                       </View>
                       <View style={{ flex: 1, marginLeft: 8 }}>
-                        <Text style={styles.label}>Week day (1-7)</Text>
+                        <Text style={styles.label}>{t(language, 'weekDayLabel')}</Text>
                         <TextInput
                           style={styles.input}
                           placeholder="e.g. 1"
@@ -486,7 +506,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
 
                 <TouchableOpacity style={styles.smallAddButton} onPress={addEntryRow}>
                   <Icon name="plus" size={12} color="#121212" />
-                  <Text style={styles.smallAddButtonText}>Add another</Text>
+                  <Text style={styles.smallAddButtonText}>{t(language, 'addAnother')}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.modalActions}>
@@ -498,7 +518,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
                     }}
                     disabled={savingAdd}
                   >
-                    <Text style={styles.cancelText}>Cancel</Text>
+                    <Text style={styles.cancelText}>{t(language, 'cancel')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.modalButton, styles.saveButton]}
@@ -508,7 +528,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
                     {savingAdd ? (
                       <ActivityIndicator color="#121212" />
                     ) : (
-                      <Text style={styles.saveText}>Save</Text>
+                      <Text style={styles.saveText}>{t(language, 'save')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -529,7 +549,7 @@ const ProgrammeDetailScreen = ({ route, navigation }) => {
         ) : (
           <>
             <Icon name="trash" size={14} color="#121212" />
-            <Text style={styles.deleteButtonText}>Delete programme</Text>
+            <Text style={styles.deleteButtonText}>{t(language, 'deleteProgramme')}</Text>
           </>
         )}
       </TouchableOpacity>

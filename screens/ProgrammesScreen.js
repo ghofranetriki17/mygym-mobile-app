@@ -14,6 +14,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { programmeAPI, workoutAPI } from '../services/api';
+import { t } from '../localization';
+import { useLanguage } from './hooks/useLanguage';
 
 const ProgrammesScreen = ({ navigation }) => {
   const [programmes, setProgrammes] = useState([]);
@@ -33,6 +35,7 @@ const ProgrammesScreen = ({ navigation }) => {
   const [description, setDescription] = useState('');
   const [durationWeeks, setDurationWeeks] = useState('');
   const [workoutEntries, setWorkoutEntries] = useState([]);
+  const { language } = useLanguage();
 
   useEffect(() => {
     loadUserId();
@@ -61,7 +64,7 @@ const ProgrammesScreen = ({ navigation }) => {
       setWorkouts(wos);
       setError(null);
     } catch {
-      setError('Failed to load programmes');
+      setError(t(language, 'errorLoadProgrammes'));
     } finally {
       setLoading(false);
     }
@@ -80,7 +83,7 @@ const ProgrammesScreen = ({ navigation }) => {
       if (!uid) return list;
       return list.filter((w) => String(w.user_id) === String(uid));
     } catch {
-      Alert.alert('Error', 'Failed to load workouts');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorLoadWorkouts'));
       return [];
     } finally {
       setLoadingWorkouts(false);
@@ -162,11 +165,11 @@ const ProgrammesScreen = ({ navigation }) => {
 
   const handleCreateProgramme = async () => {
     if (!title.trim()) {
-      Alert.alert('Validation', 'Title is required');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'titleRequired'));
       return;
     }
     if (!userId) {
-      Alert.alert('Error', 'User not identified. Please log in again.');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'userNotIdentified'));
       return;
     }
 
@@ -193,7 +196,7 @@ const ProgrammesScreen = ({ navigation }) => {
       resetForm();
       loadData();
     } catch (e) {
-      Alert.alert('Error', 'Failed to create programme');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorCreateProgramme'));
     } finally {
       setSaving(false);
     }
@@ -208,18 +211,22 @@ const ProgrammesScreen = ({ navigation }) => {
       <View style={styles.cardHeader}>
         <Text style={styles.programmeTitle}>{item.title}</Text>
         <Text style={styles.programmeDuration}>
-          {item.duration_weeks ? `${item.duration_weeks} wks` : 'Duration N/A'}
+          {item.duration_weeks
+            ? t(language, 'durationWeeksShort', { count: item.duration_weeks })
+            : t(language, 'durationNA')}
         </Text>
       </View>
-      <Text style={styles.programmeObjective}>{item.objectif || 'No objective'}</Text>
+      <Text style={styles.programmeObjective}>{item.objectif || t(language, 'noObjective')}</Text>
       <View style={styles.cardFooter}>
         <View style={styles.metaPill}>
           <Icon name="dumbbell" size={12} color="#FF3B30" />
-          <Text style={styles.metaText}>{item.workouts?.length || 0} workouts</Text>
+          <Text style={styles.metaText}>
+            {t(language, 'workoutsCount', { count: item.workouts?.length || 0 })}
+          </Text>
         </View>
         {item.is_active ? (
           <View style={styles.activePill}>
-            <Text style={styles.activeText}>Active</Text>
+            <Text style={styles.activeText}>{t(language, 'active')}</Text>
           </View>
         ) : null}
       </View>
@@ -228,7 +235,7 @@ const ProgrammesScreen = ({ navigation }) => {
 
   const renderWorkoutEntry = (entry, index) => (
     <View key={index} style={styles.entryContainer}>
-      <Text style={styles.label}>Workout #{index + 1}</Text>
+      <Text style={styles.label}>{t(language, 'workoutNumber', { num: index + 1 })}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
         {workouts.map((w) => {
           const selected = entry.workoutId === w.id;
@@ -252,7 +259,7 @@ const ProgrammesScreen = ({ navigation }) => {
       </ScrollView>
       <View style={styles.entryRow}>
         <View style={{ flex: 1, marginRight: 8 }}>
-          <Text style={styles.label}>Order</Text>
+          <Text style={styles.label}>{t(language, 'orderLabel')}</Text>
           <TextInput
             style={styles.input}
             placeholder="0"
@@ -263,7 +270,7 @@ const ProgrammesScreen = ({ navigation }) => {
           />
         </View>
         <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={styles.label}>Week day (1-7)</Text>
+          <Text style={styles.label}>{t(language, 'weekDayLabel')}</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g. 1"
@@ -275,22 +282,24 @@ const ProgrammesScreen = ({ navigation }) => {
         </View>
       </View>
       <TouchableOpacity style={styles.removeEntryButton} onPress={() => removeEntry(index)}>
-        <Text style={styles.removeEntryText}>Remove</Text>
+        <Text style={styles.removeEntryText}>{t(language, 'remove')}</Text>
       </TouchableOpacity>
     </View>
   );
 
+  const hasFilters = searchQuery.trim() || statusFilter !== 'all' || sortOrder !== 'newest';
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.screenTitle}>My Programmes</Text>
+        <Text style={styles.screenTitle}>{t(language, 'myProgrammes')}</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setModalVisible(true)}
           activeOpacity={0.8}
         >
           <Icon name="plus" size={16} color="#121212" />
-          <Text style={styles.addButtonText}>New</Text>
+          <Text style={styles.addButtonText}>{t(language, 'newLabel')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -301,7 +310,7 @@ const ProgrammesScreen = ({ navigation }) => {
               <Icon name="search" size={16} color="#999" style={{ marginRight: 8 }} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search programmes"
+                placeholder={t(language, 'searchProgrammes')}
                 placeholderTextColor="#888"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -325,7 +334,7 @@ const ProgrammesScreen = ({ navigation }) => {
                 color="#FF3B30"
               />
               <Text style={styles.sortButtonText}>
-                {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+                {sortOrder === 'newest' ? t(language, 'newest') : t(language, 'oldest')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -334,7 +343,11 @@ const ProgrammesScreen = ({ navigation }) => {
             {['all', 'active', 'inactive'].map((filterKey) => {
               const active = statusFilter === filterKey;
               const label =
-                filterKey === 'all' ? 'All' : filterKey === 'active' ? 'Active' : 'Inactive';
+                filterKey === 'all'
+                  ? t(language, 'allLabel')
+                  : filterKey === 'active'
+                  ? t(language, 'active')
+                  : t(language, 'inactive');
               return (
                 <TouchableOpacity
                   key={filterKey}
@@ -352,11 +365,11 @@ const ProgrammesScreen = ({ navigation }) => {
 
           <View style={styles.resultsRow}>
             <Text style={styles.resultsText}>
-              {visibleProgrammes.length} programme{visibleProgrammes.length === 1 ? '' : 's'}
+              {t(language, 'programmesCount', { count: visibleProgrammes.length })}
             </Text>
             {(searchQuery.length > 0 || statusFilter !== 'all' || sortOrder !== 'newest') && (
               <TouchableOpacity onPress={resetFilters} activeOpacity={0.8}>
-                <Text style={styles.resetText}>Reset</Text>
+                <Text style={styles.resetText}>{t(language, 'reset')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -371,7 +384,7 @@ const ProgrammesScreen = ({ navigation }) => {
         <View style={styles.centerContainer}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={loadData}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t(language, 'retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -383,18 +396,16 @@ const ProgrammesScreen = ({ navigation }) => {
           ListEmptyComponent={
             <View style={styles.centerContainer}>
               <Text style={styles.emptyText}>
-                {searchQuery.trim() || statusFilter !== 'all'
-                  ? 'No programmes match your filters'
-                  : 'No programmes yet'}
+                {hasFilters ? t(language, 'noProgrammesFilters') : t(language, 'noProgrammes')}
               </Text>
               <Text style={styles.emptySubText}>
-                {searchQuery.trim() || statusFilter !== 'all'
-                  ? 'Try adjusting the search or filters'
-                  : 'Create one to organize your workouts'}
+                {hasFilters
+                  ? t(language, 'adjustSearchFilters')
+                  : t(language, 'createProgrammeHint')}
               </Text>
-              {(searchQuery.trim() || statusFilter !== 'all' || sortOrder !== 'newest') && (
+              {hasFilters && (
                 <TouchableOpacity style={styles.retryButton} onPress={resetFilters} activeOpacity={0.8}>
-                  <Text style={styles.retryText}>Clear filters</Text>
+                  <Text style={styles.retryText}>{t(language, 'clearFilters')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -410,40 +421,40 @@ const ProgrammesScreen = ({ navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Create Programme</Text>
+            <Text style={styles.modalTitle}>{t(language, 'createProgramme')}</Text>
             <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-              <Text style={styles.label}>Title *</Text>
+              <Text style={styles.label}>{t(language, 'titleLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Programme title"
+                placeholder={t(language, 'programmeTitlePlaceholder')}
                 placeholderTextColor="#888"
                 value={title}
                 onChangeText={setTitle}
               />
 
-              <Text style={styles.label}>Objective</Text>
+              <Text style={styles.label}>{t(language, 'objectiveLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Fat loss, strength..."
+                placeholder={t(language, 'objectivePlaceholder')}
                 placeholderTextColor="#888"
                 value={objectif}
                 onChangeText={setObjectif}
               />
 
-              <Text style={styles.label}>Description</Text>
+              <Text style={styles.label}>{t(language, 'descriptionLabel')}</Text>
               <TextInput
                 style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
-                placeholder="Notes about this programme"
+                placeholder={t(language, 'programmeNotesPlaceholder')}
                 placeholderTextColor="#888"
                 multiline
                 value={description}
                 onChangeText={setDescription}
               />
 
-              <Text style={styles.label}>Duration (weeks)</Text>
+              <Text style={styles.label}>{t(language, 'durationWeeksLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. 8"
+                placeholder={t(language, 'durationPlaceholder')}
                 placeholderTextColor="#888"
                 keyboardType="numeric"
                 value={durationWeeks}
@@ -451,10 +462,10 @@ const ProgrammesScreen = ({ navigation }) => {
               />
 
               <View style={styles.sectionHeaderRow}>
-                <Text style={styles.label}>Workouts in this programme</Text>
+                <Text style={styles.label}>{t(language, 'workoutsInProgramme')}</Text>
                 <TouchableOpacity style={styles.smallAddButton} onPress={addWorkoutEntry}>
                   <Icon name="plus" size={12} color="#121212" />
-                  <Text style={styles.smallAddButtonText}>Add workout</Text>
+                  <Text style={styles.smallAddButtonText}>{t(language, 'addWorkout')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -462,7 +473,7 @@ const ProgrammesScreen = ({ navigation }) => {
                 <ActivityIndicator color="#FF3B30" style={{ marginVertical: 10 }} />
               ) : workoutEntries.length === 0 ? (
                 <Text style={styles.helperText}>
-                  Add workouts to define the sequence for this programme.
+                  {t(language, 'addWorkoutsHelper')}
                 </Text>
               ) : (
                 workoutEntries.map((entry, idx) => renderWorkoutEntry(entry, idx))
@@ -477,7 +488,7 @@ const ProgrammesScreen = ({ navigation }) => {
                   }}
                   disabled={saving}
                 >
-                  <Text style={styles.cancelText}>Cancel</Text>
+                  <Text style={styles.cancelText}>{t(language, 'cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.saveButton]}
@@ -487,7 +498,7 @@ const ProgrammesScreen = ({ navigation }) => {
                   {saving ? (
                     <ActivityIndicator color="#121212" />
                   ) : (
-                    <Text style={styles.saveText}>Save</Text>
+                    <Text style={styles.saveText}>{t(language, 'save')}</Text>
                   )}
                 </TouchableOpacity>
               </View>

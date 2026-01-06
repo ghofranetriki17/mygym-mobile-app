@@ -17,6 +17,8 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { workoutAPI, exerciseAPI, machineAPI, branchAPI } from '../services/api';
+import { t } from '../localization';
+import { useLanguage } from './hooks/useLanguage';
 
 const WorkoutListScreen = ({ navigation }) => {
   // États généraux
@@ -26,7 +28,7 @@ const WorkoutListScreen = ({ navigation }) => {
 
   // États search & sort
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortOrder, setSortOrder] = useState('newest'); // 'newest' ou 'oldest'
+  const [sortOrder, setSortOrder] = useState('newest');
 
   // États modal création workout
   const [modalWorkoutVisible, setModalWorkoutVisible] = useState(false);
@@ -42,7 +44,7 @@ const WorkoutListScreen = ({ navigation }) => {
   const [selectedWorkoutId, setSelectedWorkoutId] = useState(null);
 
   // Form exercise
-  const [newExercise, setNewExercise] = useState({ name: '', sets: '', reps: '', order: '' });
+  const [newExercise, setNewExercise] = useState({ name: '', sets: '', reps: '' });
   const [coachName, setCoachName] = useState('');
   const [instructions, setInstructions] = useState('');
 
@@ -57,7 +59,7 @@ const WorkoutListScreen = ({ navigation }) => {
   const [selectedCharge, setSelectedCharge] = useState(null);
   const [selectedCoach, setSelectedCoach] = useState(null);
   const [selectedBranch, setSelectedBranch] = useState(null);
-  const [trainingLocation, setTrainingLocation] = useState(null); // 'home' or 'branch'
+  const [trainingLocation, setTrainingLocation] = useState(null);
   const [loadingCharges, setLoadingCharges] = useState(false);
   const [loadingCoaches, setLoadingCoaches] = useState(false);
   const [loadingMachines, setLoadingMachines] = useState(false);
@@ -66,6 +68,7 @@ const WorkoutListScreen = ({ navigation }) => {
   // États d'enregistrement
   const [savingWorkout, setSavingWorkout] = useState(false);
   const [savingExercise, setSavingExercise] = useState(false);
+  const { language } = useLanguage();
 
   // Chargement des workouts
   useEffect(() => {
@@ -91,11 +94,10 @@ const WorkoutListScreen = ({ navigation }) => {
     }
   }, [selectedMachine]);
 
-  // Filtered and sorted workouts avec useMemo pour optimisation
+  // Filtered and sorted workouts
   const filteredAndSortedWorkouts = useMemo(() => {
     let filtered = workouts;
 
-    // Filtrer par recherche
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       filtered = workouts.filter(workout => 
@@ -105,15 +107,14 @@ const WorkoutListScreen = ({ navigation }) => {
       );
     }
 
-    // Trier par date
     const sorted = [...filtered].sort((a, b) => {
       const dateA = new Date(a.date || a.created_at || 0);
       const dateB = new Date(b.date || b.created_at || 0);
       
       if (sortOrder === 'newest') {
-        return dateB - dateA; // Plus récent en premier
+        return dateB - dateA;
       } else {
-        return dateA - dateB; // Plus ancien en premier
+        return dateA - dateB;
       }
     });
 
@@ -122,7 +123,7 @@ const WorkoutListScreen = ({ navigation }) => {
 
   const formatWorkoutDate = (workout) => {
     const raw = workout.date || workout.created_at;
-    if (!raw) return 'Date N/A';
+    if (!raw) return t(language, 'dateNA');
     try {
       const d = new Date(raw);
       if (Number.isNaN(d.getTime())) return raw;
@@ -138,7 +139,6 @@ const WorkoutListScreen = ({ navigation }) => {
     }
   };
 
-  // Fonction fetch workouts
   const fetchWorkouts = async () => {
     setLoading(true);
     setError(null);
@@ -146,26 +146,24 @@ const WorkoutListScreen = ({ navigation }) => {
       const data = await workoutAPI.getAll();
       setWorkouts(data);
     } catch (e) {
-      setError('Failed to load workouts. Please try again.');
+      setError(t(language, 'errorLoadWorkoutsList'));
     } finally {
       setLoading(false);
     }
   };
 
-  // Load branches pour choix de localisation
   const loadBranches = async () => {
     setLoadingBranches(true);
     try {
       const response = await branchAPI.getAll();
       setBranches(response.data || []);
     } catch {
-      Alert.alert('Error', 'Failed to load branches');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorLoadBranches'));
     } finally {
       setLoadingBranches(false);
     }
   };
 
-  // Load machines selon localisation (home = toutes, branch = filtrées)
   const loadMachinesForLocation = async (branchId = null) => {
     setLoadingMachines(true);
     try {
@@ -181,14 +179,13 @@ const WorkoutListScreen = ({ navigation }) => {
       setCharges([]);
       setSelectedCharge(null);
     } catch {
-      Alert.alert('Error', 'Failed to load machines');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorLoadMachines'));
       setMachines([]);
     } finally {
       setLoadingMachines(false);
     }
   };
 
-  // Load coaches pour branch sélectionnée
   const loadCoachesForBranch = async (branchId) => {
     setLoadingCoaches(true);
     try {
@@ -200,37 +197,34 @@ const WorkoutListScreen = ({ navigation }) => {
         [];
       setCoaches(list);
     } catch {
-      Alert.alert('Error', 'Failed to load coaches for this branch');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorLoadCoaches'));
       setCoaches([]);
     } finally {
       setLoadingCoaches(false);
     }
   };
 
-  // Load movements pour exercise form
   const loadMovements = async () => {
     try {
       const data = await exerciseAPI.getMovements();
       setMovements(data);
     } catch {
-      Alert.alert('Error', 'Failed to load movements');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorLoadMovements'));
     }
   };
 
-  // Load charges selon machine sélectionnée
   const loadCharges = async (machineId) => {
     setLoadingCharges(true);
     try {
       const data = await exerciseAPI.getChargesForMachine(machineId);
       setCharges(data);
     } catch {
-      Alert.alert('Error', 'Failed to load charges for selected machine');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorLoadCharges'));
     } finally {
       setLoadingCharges(false);
     }
   };
 
-  // Reset formulaire création exercise
   const resetExerciseForm = () => {
     setNewExercise({ name: '', sets: '', reps: '' });
     setCoachName('');
@@ -246,7 +240,6 @@ const WorkoutListScreen = ({ navigation }) => {
     setCoaches([]);
   };
 
-  // Reset formulaire création workout
   const resetWorkoutForm = () => {
     setNewWorkout({
       title: '',
@@ -256,27 +249,22 @@ const WorkoutListScreen = ({ navigation }) => {
     });
   };
 
-  // Clear search
   const clearSearch = () => {
     setSearchQuery('');
   };
 
-  // Toggle sort order
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest');
   };
 
-  // Gestion input workout
   const handleWorkoutInputChange = (field, value) => {
     setNewWorkout((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Gestion input exercise
   const handleExerciseInputChange = (field, value) => {
     setNewExercise((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Gestion localisation pour machines
   const handleSelectHome = () => {
     setTrainingLocation('home');
     setSelectedBranch(null);
@@ -295,10 +283,9 @@ const WorkoutListScreen = ({ navigation }) => {
     loadCoachesForBranch(branch.id);
   };
 
-  // Création workout
   const createWorkout = async () => {
     if (!newWorkout.title.trim()) {
-      Alert.alert('Validation', 'Le titre du workout est requis');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'workoutTitleRequired'));
       return;
     }
     setSavingWorkout(true);
@@ -309,25 +296,24 @@ const WorkoutListScreen = ({ navigation }) => {
         duration: Number(newWorkout.duration) || null,
         water_consumption: Number(newWorkout.water_consumption) || null,
       });
-      Alert.alert('Succès', 'Workout créé avec succès');
+      Alert.alert(t(language, 'successTitle'), t(language, 'createWorkout'));
       setModalWorkoutVisible(false);
       resetWorkoutForm();
       fetchWorkouts();
     } catch (e) {
-      Alert.alert('Erreur', 'Impossible de créer le workout');
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorCreateWorkout'));
     } finally {
       setSavingWorkout(false);
     }
   };
 
-  // Création + attachement exercice au workout sélectionné
   const createAndAttachExercise = async () => {
     if (!selectedWorkoutId) {
-      Alert.alert('Validation', 'Veuillez sélectionner un workout d\'abord');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'selectWorkoutFirst'));
       return;
     }
     if (!newExercise.name.trim() || !newExercise.sets || !newExercise.reps) {
-      Alert.alert('Validation', 'Nom, sets et reps sont requis pour l\'exercice');
+      Alert.alert(t(language, 'validationTitle'), t(language, 'exerciseFieldsRequired'));
       return;
     }
 
@@ -335,7 +321,7 @@ const WorkoutListScreen = ({ navigation }) => {
 
     const exerciseData = {
       name: newExercise.name.trim(),
-      title: coachName.trim() || null, // stored as text for traceability
+      title: coachName.trim() || null,
       sets: Number(newExercise.sets),
       reps: Number(newExercise.reps),
       machine_id: selectedMachine ? selectedMachine.id : null,
@@ -345,23 +331,20 @@ const WorkoutListScreen = ({ navigation }) => {
     };
 
     try {
-      // 1. Créer l'exercice
       const createdExercise = await exerciseAPI.create(exerciseData);
-      // 2. Attacher à workout sélectionné
       await workoutAPI.attachExerciseToWorkout(Number(selectedWorkoutId), createdExercise.id);
 
-      Alert.alert('Succès', 'Exercice créé et attaché avec succès');
+      Alert.alert(t(language, 'successTitle'), t(language, 'exerciseCreatedAttached'));
       setModalExerciseVisible(false);
       resetExerciseForm();
       fetchWorkouts();
     } catch (e) {
-      Alert.alert('Erreur', "Impossible de créer ou attacher l'exercice");
+      Alert.alert(t(language, 'errorTitle'), t(language, 'errorCreateAttachExercise'));
     } finally {
       setSavingExercise(false);
     }
   };
 
-  // Composant SelectInput simple
   const SelectInput = ({ label, data, selectedValue, onSelect, keyExtractor, labelExtractor, emptyMessage }) => (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
@@ -372,7 +355,7 @@ const WorkoutListScreen = ({ navigation }) => {
         horizontal={false}
       >
         {data.length === 0 ? (
-          <Text style={styles.noDataText}>{emptyMessage || 'No options available'}</Text>
+          <Text style={styles.noDataText}>{emptyMessage || t(language, 'noOptions')}</Text>
         ) : (
           data.map((item) => {
             const key = String(keyExtractor(item));
@@ -394,14 +377,13 @@ const WorkoutListScreen = ({ navigation }) => {
     </View>
   );
 
-  // Rendu d'un workout dans la liste
   const renderWorkoutItem = ({ item }) => (
     <TouchableOpacity
       style={[
         styles.workoutCard,
         selectedWorkoutId === item.id && { borderColor: '#1E90FF', borderWidth: 3 },
       ]}
-      onPress={() => setSelectedWorkoutId(item.id)}         // tap simple = sélection
+      onPress={() => setSelectedWorkoutId(item.id)}
       onLongPress={() => navigation.navigate('WorkoutDetails', { workout: item })}
       activeOpacity={0.85}
     >
@@ -412,7 +394,7 @@ const WorkoutListScreen = ({ navigation }) => {
         <Text style={styles.workoutTitle}>{item.title.toUpperCase()}</Text>
         <Text style={styles.workoutDate}>{formatWorkoutDate(item)}</Text>
         <Text style={styles.workoutNotes} numberOfLines={2}>
-          "{item.notes || 'No notes'}"
+          "{item.notes || t(language, 'noNotes')}"
         </Text>
         <View style={styles.metaRow}>
           {item.duration ? (
@@ -446,7 +428,7 @@ const WorkoutListScreen = ({ navigation }) => {
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={fetchWorkouts}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>{t(language, 'retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -454,16 +436,15 @@ const WorkoutListScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>MY WORKOUTS</Text>
-      <Text style={styles.subTitle}>Curated list of your sessions with quick stats</Text>
+      <Text style={styles.title}>{t(language, 'myWorkoutsTitle')}</Text>
+      <Text style={styles.subTitle}>{t(language, 'myWorkoutsSubtitle')}</Text>
 
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
           <Icon name="search" size={18} color="#999" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search workouts..."
+            placeholder={t(language, 'searchWorkouts')}
             placeholderTextColor="#999"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -477,7 +458,6 @@ const WorkoutListScreen = ({ navigation }) => {
           )}
         </View>
         
-        {/* Sort Button */}
         <TouchableOpacity style={styles.sortButton} onPress={toggleSortOrder}>
           <Icon 
             name={sortOrder === 'newest' ? 'sort-amount-down' : 'sort-amount-up'} 
@@ -485,19 +465,18 @@ const WorkoutListScreen = ({ navigation }) => {
             color="#FF3B30" 
           />
           <Text style={styles.sortButtonText}>
-            {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+            {sortOrder === 'newest' ? t(language, 'newest') : t(language, 'oldest')}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Results counter */}
       <View style={styles.resultsContainer}>
         <Text style={styles.resultsText}>
-          {filteredAndSortedWorkouts.length} workout{filteredAndSortedWorkouts.length !== 1 ? 's' : ''} found
+          {t(language, 'workoutsCountFound', { count: filteredAndSortedWorkouts.length })}
         </Text>
         <TouchableOpacity style={styles.programmesButton} onPress={() => navigation.navigate('Programmes')}>
           <Icon name="list-alt" size={14} color="#121212" />
-          <Text style={styles.programmesButtonText}>Programmes</Text>
+          <Text style={styles.programmesButtonText}>{t(language, 'programmesBtn')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -513,42 +492,40 @@ const WorkoutListScreen = ({ navigation }) => {
           <View style={styles.emptyContainer}>
             <Icon name="search" size={50} color="#555" />
             <Text style={styles.emptyText}>
-              {searchQuery.trim() ? 'No workouts match your search' : 'No workouts found'}
+              {searchQuery.trim() ? t(language, 'noWorkoutsSearch') : t(language, 'noWorkoutsFound')}
             </Text>
             {searchQuery.trim() && (
               <TouchableOpacity style={styles.clearSearchButtonLarge} onPress={clearSearch}>
-                <Text style={styles.clearSearchButtonText}>Clear Search</Text>
+                <Text style={styles.clearSearchButtonText}>{t(language, 'clearSearch')}</Text>
               </TouchableOpacity>
             )}
           </View>
         )}
       />
 
-      {/* Bouton créer un workout */}
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => setModalWorkoutVisible(true)}
         activeOpacity={0.8}
       >
         <Icon name="plus" size={18} color="#121212" />
-        <Text style={styles.addButtonText}>Create Workout</Text>
+        <Text style={styles.addButtonText}>{t(language, 'createWorkout')}</Text>
       </TouchableOpacity>
 
-      {/* Bouton créer et attacher exercice */}
       <TouchableOpacity
         style={[styles.addButton, !selectedWorkoutId && { backgroundColor: '#888' }]}
         onPress={() => {
           if (selectedWorkoutId) {
             setModalExerciseVisible(true);
           } else {
-            Alert.alert('Please select a workout first.');
+            Alert.alert(t(language, 'validationTitle'), t(language, 'selectWorkoutFirst'));
           }
         }}
         activeOpacity={selectedWorkoutId ? 0.8 : 1}
         disabled={!selectedWorkoutId}
       >
         <Icon name="plus" size={18} color="#121212" />
-        <Text style={styles.addButtonText}>Create & Attach Exercise</Text>
+        <Text style={styles.addButtonText}>{t(language, 'createAttachExercise')}</Text>
       </TouchableOpacity>
 
       {/* Modal création workout */}
@@ -565,13 +542,13 @@ const WorkoutListScreen = ({ navigation }) => {
           >
             <ScrollView contentContainerStyle={styles.scrollContainer}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Create New Workout</Text>
+                <Text style={styles.modalTitle}>{t(language, 'createWorkout')}</Text>
 
                 <View style={styles.inputWithIcon}>
                   <Icon name="dumbbell" size={18} color="#FF3B30" />
                   <TextInput
                     style={styles.input}
-                    placeholder="Title *"
+                    placeholder={t(language, 'workoutTitlePlaceholder')}
                     placeholderTextColor="#999"
                     value={newWorkout.title}
                     onChangeText={(text) => handleWorkoutInputChange('title', text)}
@@ -585,7 +562,7 @@ const WorkoutListScreen = ({ navigation }) => {
                   <Icon name="sticky-note" size={18} color="#FF3B30" />
                   <TextInput
                     style={[styles.input, { height: 90 }]}
-                    placeholder="Notes"
+                    placeholder={t(language, 'notesPlaceholder')}
                     placeholderTextColor="#999"
                     value={newWorkout.notes}
                     onChangeText={(text) => handleWorkoutInputChange('notes', text)}
@@ -599,7 +576,7 @@ const WorkoutListScreen = ({ navigation }) => {
                   <Icon name="stopwatch" size={18} color="#FF3B30" />
                   <TextInput
                     style={styles.input}
-                    placeholder="Duration (minutes)"
+                    placeholder={t(language, 'durationMinutesPlaceholder')}
                     placeholderTextColor="#999"
                     value={newWorkout.duration}
                     onChangeText={(text) => handleWorkoutInputChange('duration', text)}
@@ -613,7 +590,7 @@ const WorkoutListScreen = ({ navigation }) => {
                   <Icon name="tint" size={18} color="#1E90FF" />
                   <TextInput
                     style={styles.input}
-                    placeholder="Water consumption (L)"
+                    placeholder={t(language, 'waterPlaceholder')}
                     placeholderTextColor="#999"
                     value={newWorkout.water_consumption}
                     onChangeText={(text) => handleWorkoutInputChange('water_consumption', text)}
@@ -631,7 +608,7 @@ const WorkoutListScreen = ({ navigation }) => {
                     activeOpacity={0.8}
                     disabled={savingWorkout}
                   >
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                    <Text style={styles.cancelButtonText}>{t(language, 'cancel')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={createWorkout}
@@ -642,7 +619,7 @@ const WorkoutListScreen = ({ navigation }) => {
                     {savingWorkout ? (
                       <ActivityIndicator color="#121212" />
                     ) : (
-                      <Text style={styles.saveButtonText}>Save</Text>
+                      <Text style={styles.saveButtonText}>{t(language, 'save')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -666,17 +643,16 @@ const WorkoutListScreen = ({ navigation }) => {
           >
             <ScrollView contentContainerStyle={styles.scrollContainer}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>New Exercise</Text>
+                <Text style={styles.modalTitle}>{t(language, 'newExerciseTitle')}</Text>
                 <Text style={{ color: 'white', marginBottom: 10 }}>
-                  Selected Workout ID: {selectedWorkoutId || 'None'}
+                  {t(language, 'selectedWorkoutId', { id: selectedWorkoutId || t(language, 'none') })}
                 </Text>
 
-                {/* Exercise Name */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Exercise Name *</Text>
+                  <Text style={styles.label}>{t(language, 'exerciseNameLabel')}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter exercise name"
+                    placeholder={t(language, 'exerciseNamePlaceholder')}
                     placeholderTextColor="#999"
                     value={newExercise.name}
                     onChangeText={(text) => handleExerciseInputChange('name', text)}
@@ -685,9 +661,8 @@ const WorkoutListScreen = ({ navigation }) => {
                   />
                 </View>
 
-                {/* Localisation pour filtrer les machines */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Where are you training?</Text>
+                  <Text style={styles.label}>{t(language, 'whereTraining')}</Text>
                   <View style={styles.locationButtonsRow}>
                     <TouchableOpacity
                       style={[
@@ -708,12 +683,12 @@ const WorkoutListScreen = ({ navigation }) => {
                           trainingLocation === 'home' && styles.locationButtonTextActive,
                         ]}
                       >
-                        At Home
+                        {t(language, 'atHome')}
                       </Text>
                     </TouchableOpacity>
                   </View>
                   <Text style={styles.helperText}>
-                    Pick your branch to see its machines, or choose Home to load everything.
+                    {t(language, 'locationHelper')}
                   </Text>
                 </View>
 
@@ -721,23 +696,22 @@ const WorkoutListScreen = ({ navigation }) => {
                   <ActivityIndicator size="small" color="#FF3B30" style={{ marginBottom: 12 }} />
                 ) : (
                   <SelectInput
-                    label="Select Branch (gym)"
+                    label={t(language, 'selectBranch')}
                     data={branches}
                     selectedValue={selectedBranch}
                     onSelect={handleSelectBranch}
                     keyExtractor={(item) => item.id}
                     labelExtractor={(item) => item.name || `Branch ${item.id}`}
-                    emptyMessage="No branches available"
+                    emptyMessage={t(language, 'noBranches')}
                   />
                 )}
 
-                {/* Coach name (for traceability, no relation) */}
                 {trainingLocation === 'branch' && (
                   loadingCoaches ? (
                     <ActivityIndicator size="small" color="#FF3B30" style={{ marginVertical: 10 }} />
                   ) : (
                     <SelectInput
-                      label="Coach Name (select)"
+                      label={t(language, 'coachNameSelect')}
                       data={coaches}
                       selectedValue={selectedCoach}
                       onSelect={(coach) => {
@@ -746,16 +720,18 @@ const WorkoutListScreen = ({ navigation }) => {
                       }}
                       keyExtractor={(item) => item.id}
                       labelExtractor={(item) => item.name || item.full_name || `Coach ${item.id}`}
-                      emptyMessage={selectedBranch ? 'No coaches for this branch' : 'Select a branch first'}
+                      emptyMessage={
+                        selectedBranch ? t(language, 'noCoachesBranch') : t(language, 'selectBranchFirst')
+                      }
                     />
                   )
                 )}
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Coach Name (manual)</Text>
+                  <Text style={styles.label}>{t(language, 'coachNameManual')}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter coach name or type your own"
+                    placeholder={t(language, 'coachNamePlaceholder')}
                     placeholderTextColor="#999"
                     value={coachName}
                     onChangeText={(text) => {
@@ -764,15 +740,14 @@ const WorkoutListScreen = ({ navigation }) => {
                     }}
                     selectionColor="#FF3B30"
                   />
-                  <Text style={styles.helperText}>Selection is stored as plain text for traceability.</Text>
+                  <Text style={styles.helperText}>{t(language, 'coachNameHelper')}</Text>
                 </View>
 
-                {/* Select Machine */}
                 {loadingMachines ? (
                   <ActivityIndicator size="small" color="#FF3B30" style={{ marginVertical: 10 }} />
                 ) : (
                   <SelectInput
-                    label="Select Machine"
+                    label={t(language, 'selectMachine')}
                     data={machines}
                     selectedValue={selectedMachine}
                     onSelect={setSelectedMachine}
@@ -780,15 +755,14 @@ const WorkoutListScreen = ({ navigation }) => {
                     labelExtractor={(item) => item.name}
                     emptyMessage={
                       trainingLocation
-                        ? 'No machines available for this location'
-                        : 'Select where you are training to load machines'
+                        ? t(language, 'noMachinesLocation')
+                        : t(language, 'selectLocationFirst')
                     }
                   />
                 )}
 
-                {/* Select Movement */}
                 <SelectInput
-                  label="Select Movement"
+                  label={t(language, 'selectMovement')}
                   data={movements}
                   selectedValue={selectedMovement}
                   onSelect={setSelectedMovement}
@@ -796,12 +770,11 @@ const WorkoutListScreen = ({ navigation }) => {
                   labelExtractor={(item) => item.name || item.title || `Movement ${item.id}`}
                 />
 
-                {/* Select Charge */}
                 {loadingCharges ? (
                   <ActivityIndicator size="small" color="#FF3B30" style={{ marginVertical: 10 }} />
                 ) : (
                   <SelectInput
-                    label="Select Charge"
+                    label={t(language, 'selectCharge')}
                     data={charges}
                     selectedValue={selectedCharge}
                     onSelect={setSelectedCharge}
@@ -810,13 +783,12 @@ const WorkoutListScreen = ({ navigation }) => {
                   />
                 )}
 
-                {/* Sets and Reps */}
                 <View style={styles.inputGroupRow}>
                   <View style={styles.inputHalf}>
-                    <Text style={styles.label}>Sets *</Text>
+                    <Text style={styles.label}>{t(language, 'setsLabel')}</Text>
                     <TextInput
                       style={styles.input}
-                      placeholder="Sets"
+                      placeholder={t(language, 'setsPlaceholder')}
                       placeholderTextColor="#999"
                       value={newExercise.sets}
                       onChangeText={(text) => handleExerciseInputChange('sets', text)}
@@ -826,10 +798,10 @@ const WorkoutListScreen = ({ navigation }) => {
                   </View>
                   
                   <View style={styles.inputHalf}>
-                    <Text style={styles.label}>Reps *</Text>
+                    <Text style={styles.label}>{t(language, 'repsLabel')}</Text>
                     <TextInput
                       style={styles.input}
-                      placeholder="Reps"
+                      placeholder={t(language, 'repsPlaceholder')}
                       placeholderTextColor="#999"
                       value={newExercise.reps}
                       onChangeText={(text) => handleExerciseInputChange('reps', text)}
@@ -839,12 +811,11 @@ const WorkoutListScreen = ({ navigation }) => {
                   </View>
                 </View>
 
-                {/* Instructions */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Instructions (optional)</Text>
+                  <Text style={styles.label}>{t(language, 'instructionsLabel')}</Text>
                   <TextInput
                     style={[styles.input, { height: 80 }]}
-                    placeholder="Enter instructions"
+                    placeholder={t(language, 'instructionsPlaceholder')}
                     placeholderTextColor="#999"
                     value={instructions}
                     onChangeText={setInstructions}
@@ -854,14 +825,13 @@ const WorkoutListScreen = ({ navigation }) => {
                   />
                 </View>
 
-                {/* Buttons */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <TouchableOpacity
                     style={[styles.submitButton, { backgroundColor: '#ccc' }]}
                     onPress={() => setModalExerciseVisible(false)}
                     disabled={savingExercise}
                   >
-                    <Text style={[styles.submitButtonText, { color: '#333' }]}>Cancel</Text>
+                    <Text style={[styles.submitButtonText, { color: '#333' }]}>{t(language, 'cancel')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -872,7 +842,7 @@ const WorkoutListScreen = ({ navigation }) => {
                     {savingExercise ? (
                       <ActivityIndicator color="#fff" />
                     ) : (
-                      <Text style={styles.submitButtonText}>Add Exercise</Text>
+                      <Text style={styles.submitButtonText}>{t(language, 'addExercise')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -902,8 +872,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 18,
   },
-
-  // --- NEW SEARCH & SORT STYLES ---
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -999,7 +967,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
-
   workoutCard: {
     flexDirection: 'row',
     backgroundColor: '#171717',
@@ -1067,8 +1034,6 @@ const styles = StyleSheet.create({
   errorText: { color: '#FF6F61', fontSize: 18, marginBottom: 20, textAlign: 'center', fontWeight: '700' },
   retryButton: { backgroundColor: '#FF3B30', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 30 },
   retryButtonText: { color: '#121212', fontWeight: '900', fontSize: 18 },
-
-  // Modal
   modalContainer: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.85)' },
   scrollContainer: { padding: 20, paddingBottom: 40 },
   modalContent: {
@@ -1098,10 +1063,26 @@ const styles = StyleSheet.create({
     fontSize: 17,
     marginLeft: 10,
   },
-
+  modalButton: {
+    paddingVertical: 16,
+    borderRadius: 40,
+    width: '48%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#FF3B30',
+  },
+  saveButtonText: {
+    fontWeight: '900',
+    fontSize: 18,
+    color: '#121212',
+  },
+  cancelButton: { backgroundColor: '#333' },
+  cancelButtonText: { fontWeight: '900', fontSize: 18, color: '#999' },
+  buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
   inputGroup: { marginBottom: 15 },
   label: { fontWeight: '700', color: '#FF3B30', marginBottom: 6, fontSize: 15 },
-
   inputGroupRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
   inputHalf: { flex: 1, marginRight: 10 },
   submitButton: {
@@ -1113,13 +1094,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   submitButtonText: { fontWeight: '900', fontSize: 18, color: '#fff' },
-
-  cancelButton: { backgroundColor: '#333' },
-  cancelButtonText: { fontWeight: '900', fontSize: 18, color: '#999' },
-
-  buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-
-  // Localisation (home / branch)
   locationButtonsRow: {
     flexDirection: 'row',
     gap: 10,
@@ -1159,8 +1133,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
   },
-
-  // --- UPDATED SELECT INPUT STYLE (machines, movements, charges) ---
   selectContainerScroll: {
     maxHeight: 140,
     backgroundColor: '#2A2A2A',
@@ -1170,8 +1142,8 @@ const styles = StyleSheet.create({
   },
   selectContainerContent: {
     paddingVertical: 4,
-    flexDirection: 'row',      // horizontal layout for pills
-    flexWrap: 'wrap',          // wrap pills to next line if needed
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'flex-start',
   },
   option: {
@@ -1206,9 +1178,7 @@ const styles = StyleSheet.create({
     color: '#121212',
     fontWeight: '900',
   },
-
   noDataText: { color: '#777', textAlign: 'center', fontStyle: 'italic' },
 });
-
 
 export default WorkoutListScreen;

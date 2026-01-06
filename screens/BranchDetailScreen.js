@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,16 +20,19 @@ import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { branchAPI, groupSessionAPI } from '../services/api';
 import { LinearGradient } from 'expo-linear-gradient';
+import { t, supportedLanguages } from '../localization';
+import { useLanguage } from './hooks/useLanguage';
 
 const { width } = Dimensions.get('window');
 const HERO_FALLBACK =
   'https://images.unsplash.com/photo-1534367507873-d2d7e24c797f?q=80&w=2070&auto=format&fit=crop';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const shortDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const BranchDetailScreen = ({ route, navigation }) => {
   const { branch } = route.params;
+  const { language, changeLanguage } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [coaches, setCoaches] = useState([]);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
@@ -148,22 +151,22 @@ const BranchDetailScreen = ({ route, navigation }) => {
 
   const refreshCoaches = async () => {
     Alert.alert(
-      "Actualiser les coaches",
-      "Recharger les donnees des coaches?",
+      t(language, 'refreshCoachesTitle'),
+      t(language, 'refreshCoachesBody'),
       [
-        { text: "Annuler", style: "cancel" },
-        { text: "Actualiser", onPress: fetchCoaches }
+        { text: t(language, 'cancel'), style: "cancel" },
+        { text: t(language, 'refresh'), onPress: fetchCoaches }
       ]
     );
   };
 
   const refreshSessions = async () => {
     Alert.alert(
-      "Actualiser les sessions",
-      "Recharger les sessions collectives?",
+      t(language, 'refreshSessionsTitle'),
+      t(language, 'refreshSessionsBody'),
       [
-        { text: "Annuler", style: "cancel" },
-        { text: "Actualiser", onPress: fetchGroupSessions }
+        { text: t(language, 'cancel'), style: "cancel" },
+        { text: t(language, 'refresh'), onPress: fetchGroupSessions }
       ]
     );
   };
@@ -202,7 +205,7 @@ const BranchDetailScreen = ({ route, navigation }) => {
     const slot = todayAvailability();
     if (!slot || slot.is_closed) {
       return {
-        label: 'Closed',
+        label: t(language, 'closed'),
         color: '#FF6B6B',
         bg: 'rgba(255,107,107,0.15)',
         border: 'rgba(255,107,107,0.4)',
@@ -215,7 +218,7 @@ const BranchDetailScreen = ({ route, navigation }) => {
     const closeVal = Number(cleanTime(slot.closing_hour).replace(':', ''));
     const isOpen = nowVal >= openVal && nowVal <= closeVal;
     return {
-      label: isOpen ? 'Open now' : 'Closed now',
+      label: isOpen ? t(language, 'openNow') : t(language, 'closedNow'),
       color: isOpen ? '#00E676' : '#FFB020',
       bg: isOpen ? 'rgba(0,230,118,0.15)' : 'rgba(255,176,32,0.15)',
       border: isOpen ? 'rgba(0,230,118,0.4)' : 'rgba(255,176,32,0.4)',
@@ -538,7 +541,7 @@ const BranchDetailScreen = ({ route, navigation }) => {
                         </View>
                         <View style={styles.sessionChipMetaRow}>
                           <Ionicons name="time-outline" size={12} color="#FF3B30" />
-                          <Text style={styles.sessionChipTime}>\n                            {new Date(item.session_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} � {item.duration || '--'} min\n                          </Text>
+                          <Text style={styles.sessionChipTime}>\n                            {new Date(item.session_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {item.duration || '--'} min\n                          </Text>
                         </View>
                         <View style={styles.sessionChipMetaRow}>
                           <Ionicons name="person-outline" size={12} color="#9CA3AF" />
@@ -550,7 +553,7 @@ const BranchDetailScreen = ({ route, navigation }) => {
                 ) : (
                   <View style={styles.emptyDay}>
                     <Ionicons name="fitness-outline" size={24} color="#666" />
-                    <Text style={styles.emptyDayText}>Pas de session</Text>
+                    <Text style={styles.emptyDayText}>{t(language, 'noSession')}</Text>
                   </View>
                 )}
               </View>
@@ -562,7 +565,7 @@ const BranchDetailScreen = ({ route, navigation }) => {
           style={styles.currentWeekButton}
           onPress={() => setCurrentWeekOffset(0)}
         >
-          <Text style={styles.currentWeekButtonText}>Cette semaine</Text>
+          <Text style={styles.currentWeekButtonText}>{t(language, 'thisWeek')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -583,15 +586,28 @@ const BranchDetailScreen = ({ route, navigation }) => {
             </TouchableOpacity>
             <View style={styles.heroPill}>
               <Ionicons name="flame" size={16} color="#FF3B30" />
-              <Text style={styles.heroPillText}>Location</Text>
+              <Text style={styles.heroPillText}>{t(language, 'location')}</Text>
             </View>
           </View>
 
           <View style={styles.heroContent}>
             <Text style={styles.branchName}>{branch.name}</Text>
             <Text style={styles.branchSubtitle} numberOfLines={1}>
-              {branch.address || branch.city || 'Move. Lift. Repeat.'}
+              {branch.address || branch.city || t(language, 'branchTagline')}
             </Text>
+            <View style={styles.langSwitch}>
+              {supportedLanguages.map((lang) => (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={[styles.langChip, language === lang.code && styles.langChipActive]}
+                  onPress={() => changeLanguage(lang.code)}
+                >
+                  <Text style={[styles.langChipText, language === lang.code && styles.langChipTextActive]}>
+                    {lang.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <View style={styles.heroMetaRow}>
               <View
@@ -1715,6 +1731,7 @@ const styles = StyleSheet.create({
 });
 
 export default BranchDetailScreen;
+
 
 
 
